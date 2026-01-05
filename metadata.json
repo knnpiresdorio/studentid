@@ -1,0 +1,7 @@
+{
+  "name": "UniPass - ID Digital",
+  "description": "Carteira de estudante digital com sistema de validação para parceiros e gestão administrativa. Funciona offline para visualização da carteirinha.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

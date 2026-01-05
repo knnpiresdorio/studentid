@@ -1,0 +1,4 @@
+fullName,cpf,registrationNumber,course,validUntil,birthDate,userType,city,state
+"João Silva","123.456.789-00","2024001","Ciência da Computação","2024-12-31","2000-05-15","ALUNO","São Paulo","SP"
+"Maria Oliveira","987.654.321-11","2024002","Engenharia de Software","2025-06-30","2001-10-20","ALUNO","Rio de Janeiro","RJ"
+"Carlos Souza","456.789.012-33","2024003","Sistemas de Informação","2024-12-31","1999-03-25","ALUNO","Belo Horizonte","MG"
