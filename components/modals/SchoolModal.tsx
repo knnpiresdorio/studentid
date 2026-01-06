@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X, Building2, Camera, Plus, ShieldCheck } from 'lucide-react';
 import { useForm, Controller, SubmitHandler } from 'react-hook-form';
+import { uploadFile } from '../../services/storage';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SchoolSchema, schoolSchema } from '../../schemas';
 import { School, SchoolType } from '../../types';
@@ -18,6 +19,8 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
     onSave,
     school
 }) => {
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const {
         register,
@@ -52,6 +55,8 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
         const file = e.target.files?.[0];
         if (!file) return;
 
+        setSelectedFile(file);
+
         const reader = new FileReader();
         reader.onloadend = () => {
             setValue('logoUrl', reader.result as string, { shouldValidate: true });
@@ -59,13 +64,35 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
         reader.readAsDataURL(file);
     };
 
-    const onSubmit: SubmitHandler<SchoolSchema> = (data) => {
-        onSave({
-            ...data,
-            id: data.id || `sch_${Date.now()}`,
-            createdAt: (data as any).createdAt || new Date().toISOString()
-        } as School);
-        onClose();
+    const onSubmit: SubmitHandler<SchoolSchema> = async (data) => {
+        setIsUploading(true);
+        try {
+            let finalLogoUrl = data.logoUrl;
+
+            // If a new file was selected, upload it to storage
+            if (selectedFile) {
+                finalLogoUrl = await uploadFile(selectedFile, 'schools');
+            }
+
+            const schoolToSave = {
+                ...data,
+                logoUrl: finalLogoUrl,
+                createdAt: (data as any).createdAt || new Date().toISOString()
+            };
+
+            // Remove empty ID so Supabase generates a UUID
+            if (!schoolToSave.id) {
+                delete (schoolToSave as any).id;
+            }
+
+            onSave(schoolToSave as School);
+            onClose();
+        } catch (error) {
+            console.error('Error in SchoolModal onSubmit:', error);
+            alert('Erro ao salvar instituição. Tente novamente.');
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     if (!isOpen) return null;
@@ -175,9 +202,17 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
                             </button>
                             <button
                                 type="submit"
-                                className="px-10 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-500 hover:shadow-xl hover:shadow-blue-500/20 hover:-translate-y-0.5 transition-all shadow-lg active:scale-95 tracking-wide"
+                                disabled={isUploading}
+                                className="px-10 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-500 hover:shadow-xl hover:shadow-blue-500/20 hover:-translate-y-0.5 transition-all shadow-lg active:scale-95 tracking-wide disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                             >
-                                {school ? 'Salvar Edição' : 'Criar Instituição'}
+                                {isUploading ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        Salvando...
+                                    </>
+                                ) : (
+                                    school ? 'Salvar Edição' : 'Criar Instituição'
+                                )}
                             </button>
                         </div>
                     </div>

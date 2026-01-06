@@ -397,10 +397,10 @@ export const AdminDashboard = ({
 
     const handleSaveSchoolGlobal = async (schoolData: School) => {
         try {
-            await upsertSchool.mutateAsync(schoolData);
+            const savedSchool = await upsertSchool.mutateAsync(schoolData);
             setIsSchoolModalOpen(false);
             addAuditLog(
-                schoolData.id,
+                savedSchool?.id || 'new',
                 'UPSERT_SCHOOL',
                 `Instituição ${schoolData.name} salva globalmente`,
                 user?.id || 'admin',

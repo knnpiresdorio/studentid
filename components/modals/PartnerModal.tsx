@@ -9,6 +9,7 @@ import type { SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PartnerSchema, partnerSchema } from '../../schemas';
 import { formatPhone, BRAZIL_STATES } from '../../utils/formatters';
+import { uploadFile } from '../../services/storage';
 
 interface PartnerModalProps {
     isOpen: boolean;
@@ -34,6 +35,9 @@ export const PartnerModal: React.FC<PartnerModalProps> = ({
     const [newPromotion, setNewPromotion] = useState('');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
+    const [selectedBannerFile, setSelectedBannerFile] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
 
     const {
         register,
@@ -85,12 +89,38 @@ export const PartnerModal: React.FC<PartnerModalProps> = ({
 
     if (!isOpen) return null;
 
-    const onSubmit: SubmitHandler<PartnerSchema> = (data) => {
+    const onSubmit: SubmitHandler<PartnerSchema> = async (data) => {
         if (withUserCreation && !partner && (!username || !password)) {
             alert("É necessário definir um usuário e senha para o gestor da loja.");
             return;
         }
-        onSave(data as Partner, { username, password });
+
+        setIsUploading(true);
+        try {
+            let finalLogoUrl = data.logoUrl;
+            let finalBannerUrl = data.bannerUrl;
+
+            if (selectedLogoFile) {
+                finalLogoUrl = await uploadFile(selectedLogoFile, 'partners/logos');
+            }
+
+            if (selectedBannerFile) {
+                finalBannerUrl = await uploadFile(selectedBannerFile, 'partners/banners');
+            }
+
+            const partnerData = {
+                ...data,
+                logoUrl: finalLogoUrl,
+                bannerUrl: finalBannerUrl
+            };
+
+            onSave(partnerData as Partner, { username, password });
+        } catch (error) {
+            console.error('Error uploading partner assets:', error);
+            alert('Erro ao fazer upload das imagens. Verifique sua conexão.');
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     const handleAddPromotion = () => {
@@ -112,6 +142,9 @@ export const PartnerModal: React.FC<PartnerModalProps> = ({
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'logoUrl' | 'bannerUrl') => {
         const file = e.target.files?.[0];
         if (file) {
+            if (field === 'logoUrl') setSelectedLogoFile(file);
+            if (field === 'bannerUrl') setSelectedBannerFile(file);
+
             const url = URL.createObjectURL(file);
             setValue(field, url, { shouldValidate: true });
         }
@@ -423,8 +456,21 @@ export const PartnerModal: React.FC<PartnerModalProps> = ({
                         <span className="text-[10px] uppercase font-bold tracking-tight">LGPD: Dados empresariais protegidos</span>
                     </div>
                     <div className="flex gap-3">
-                        <button onClick={onClose} className="px-6 py-2.5 rounded-xl border border-white/10 font-bold text-slate-300 hover:bg-white/5 hover:text-white transition-all">Cancelar</button>
-                        <button onClick={handleSubmit(onSubmit)} className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold hover:shadow-lg hover:shadow-purple-500/20 hover:-translate-y-0.5 transition-all shadow-md">Salvar Parceiro</button>
+                        <button onClick={onClose} disabled={isUploading} className="px-6 py-2.5 rounded-xl border border-white/10 font-bold text-slate-300 hover:bg-white/5 hover:text-white transition-all disabled:opacity-50">Cancelar</button>
+                        <button
+                            onClick={handleSubmit(onSubmit)}
+                            disabled={isUploading}
+                            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold hover:shadow-lg hover:shadow-purple-500/20 hover:-translate-y-0.5 transition-all shadow-md disabled:opacity-50 flex items-center gap-2"
+                        >
+                            {isUploading ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Salvando...
+                                </>
+                            ) : (
+                                'Salvar Parceiro'
+                            )}
+                        </button>
                     </div>
                 </div>
             </div>

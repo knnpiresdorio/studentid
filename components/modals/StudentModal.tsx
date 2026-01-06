@@ -17,6 +17,7 @@ import { formatCPF, BRAZIL_STATES } from '../../utils/formatters';
 import { ShieldCheck, Edit2, Trash2, Building2 } from 'lucide-react';
 import { DependentModal } from './DependentModal';
 import { useAuth } from '../../context/AuthContext';
+import { uploadFile } from '../../services/storage';
 
 interface StudentModalProps {
     isOpen: boolean;
@@ -45,6 +46,9 @@ export const StudentModal: React.FC<StudentModalProps> = ({
 
     const [isDepModalOpen, setIsDepModalOpen] = useState(false);
     const [editingDepIndex, setEditingDepIndex] = useState<number | null>(null);
+    const [selectedStudentFile, setSelectedStudentFile] = useState<File | null>(null);
+    const [dependentFilesMap, setDependentFilesMap] = useState<Map<string, File>>(new Map());
+    const [isSaving, setIsSaving] = useState(false);
 
     const {
         register,
@@ -92,6 +96,8 @@ export const StudentModal: React.FC<StudentModalProps> = ({
         const file = e.target.files?.[0];
         if (!file) return;
 
+        setSelectedStudentFile(file);
+
         const reader = new FileReader();
         reader.onloadend = () => {
             setValue('photoUrl', reader.result as string, { shouldValidate: true });
@@ -109,16 +115,55 @@ export const StudentModal: React.FC<StudentModalProps> = ({
         setIsDepModalOpen(true);
     };
 
-    const handleSaveDependent = (dependent: Dependent) => {
+    const handleSaveDependent = (dependent: Dependent, file?: File | null) => {
+        // Use dependent ID as key for the files map
+        const depId = dependent.id || `temp_${Date.now()}`;
+        const dependentWithId = { ...dependent, id: depId };
+
+        if (file) {
+            setDependentFilesMap(prev => new Map(prev).set(depId, file));
+        }
+
         if (editingDepIndex !== null) {
-            update(editingDepIndex, dependent);
+            update(editingDepIndex, dependentWithId);
         } else {
-            append(dependent);
+            append(dependentWithId);
         }
     };
 
-    const onSubmit: SubmitHandler<StudentSchema> = (data) => {
-        onSave(data as Student);
+    const onSubmit: SubmitHandler<StudentSchema> = async (data) => {
+        setIsSaving(true);
+        try {
+            let finalPhotoUrl = data.photoUrl;
+
+            // 1. Upload Student Photo if changed
+            if (selectedStudentFile) {
+                finalPhotoUrl = await uploadFile(selectedStudentFile, 'students/photos');
+            }
+
+            // 2. Upload Dependent Photos if they have new files
+            const updatedDependents = await Promise.all((data.dependents || []).map(async (dep) => {
+                const depFile = dependentFilesMap.get(dep.id || '');
+                if (depFile) {
+                    const uploadedUrl = await uploadFile(depFile, 'students/dependents');
+                    return { ...dep, photoUrl: uploadedUrl };
+                }
+                return dep;
+            }));
+
+            const studentToSave = {
+                ...data,
+                photoUrl: finalPhotoUrl,
+                dependents: updatedDependents
+            };
+
+            onSave(studentToSave as Student);
+        } catch (error) {
+            console.error('Error saving student with assets:', error);
+            alert('Erro ao salvar membro e fotos. Verifique sua conexão.');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     if (!isOpen) return null;
@@ -461,8 +506,19 @@ export const StudentModal: React.FC<StudentModalProps> = ({
                                 >
                                     Cancelar
                                 </button>
-                                <button type="submit" className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold hover:shadow-lg hover:shadow-blue-500/20 hover:-translate-y-0.5 transition-all shadow-md">
-                                    Salvar Membro
+                                <button
+                                    type="submit"
+                                    disabled={isSaving}
+                                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold hover:shadow-lg hover:shadow-blue-500/20 hover:-translate-y-0.5 transition-all shadow-md disabled:opacity-50 flex items-center gap-2"
+                                >
+                                    {isSaving ? (
+                                        <>
+                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                            Salvando...
+                                        </>
+                                    ) : (
+                                        'Salvar Membro'
+                                    )}
                                 </button>
                             </div>
                         </div>

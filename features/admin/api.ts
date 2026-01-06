@@ -48,7 +48,7 @@ export const useSchoolsQuery = (enabled: boolean = true) => {
     return useQuery({
         queryKey: [ADMIN_KEYS.schools],
         queryFn: fetchSchools,
-        staleTime: 1000 * 60 * 60, // Schools change rarely
+        staleTime: 1000 * 60 * 5, // 5 minutes
         enabled
     });
 };

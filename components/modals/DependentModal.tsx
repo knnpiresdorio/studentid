@@ -9,7 +9,7 @@ import { Dependent } from '../../types';
 interface DependentModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (dependent: Dependent) => void;
+    onSave: (dependent: Dependent, file?: File | null) => void;
     dependent?: Dependent | null;
 }
 
@@ -19,6 +19,7 @@ export const DependentModal: React.FC<DependentModalProps> = ({
     onSave,
     dependent
 }) => {
+    const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
     const {
         register,
         handleSubmit,
@@ -56,6 +57,8 @@ export const DependentModal: React.FC<DependentModalProps> = ({
         const file = e.target.files?.[0];
         if (!file) return;
 
+        setSelectedFile(file);
+
         const reader = new FileReader();
         reader.onloadend = () => {
             setValue('photoUrl', reader.result as string, { shouldValidate: true });
@@ -67,7 +70,8 @@ export const DependentModal: React.FC<DependentModalProps> = ({
         onSave({
             ...data,
             id: data.id || `dep_${Date.now()}`
-        } as Dependent);
+        } as Dependent, selectedFile);
+        setSelectedFile(null);
         onClose();
     };
 
