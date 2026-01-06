@@ -55,6 +55,7 @@ import { SchoolModal } from '../components/modals/SchoolModal';
 import { ImportStudentsModal } from '../components/modals/ImportStudentsModal';
 import {
     useUpsertStudentMutation,
+    useBulkUpsertStudentsMutation,
     useUpsertPartnerMutation,
     useDeleteStudentMutation,
     useDeletePartnerMutation,
@@ -321,9 +322,11 @@ export const AdminDashboard = ({
         }
     };
 
+    const bulkUpsertStudents = useBulkUpsertStudentsMutation();
+
     const handleImportStudents = async (students: Student[]) => {
         try {
-            await Promise.all(students.map(s => upsertStudent.mutateAsync(s)));
+            await bulkUpsertStudents.mutateAsync(students);
             addAuditLog(
                 managedSchool?.id || 'ALL',
                 ActionType.MODIFICATION,

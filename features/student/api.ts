@@ -97,6 +97,21 @@ export const useUpsertStudentMutation = () => {
     });
 };
 
+export const useBulkUpsertStudentsMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (students: Student[]) => {
+            const { data, error } = await supabase.from('students').upsert(students, { onConflict: 'cpf' });
+            if (error) throw error;
+            return data;
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: [STUDENT_KEYS.paginated] });
+            queryClient.invalidateQueries({ queryKey: ['studentStats'] });
+        },
+    });
+};
+
 export const useDeleteStudentMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
