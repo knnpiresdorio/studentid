@@ -54,27 +54,30 @@ export const fetchPaginatedStudents = async ({ page, pageSize, searchTerm, schoo
     return { data: data || [], count: count || 0 };
 };
 
-export const useStudentStatsQuery = () => {
+export const useStudentStatsQuery = (enabled: boolean = true) => {
     return useQuery({
         queryKey: ['studentStats'],
         queryFn: fetchStudentStats,
         staleTime: 1000 * 60 * 5,
+        enabled
     });
 };
 
-export const useChangeRequestsQuery = () => {
+export const useChangeRequestsQuery = (enabled: boolean = true) => {
     return useQuery({
         queryKey: [STUDENT_KEYS.requests],
         queryFn: fetchChangeRequests,
         staleTime: 1000 * 30,
+        enabled
     });
 };
 
-export const usePaginatedStudentsQuery = (params: PaginationParams) => {
+export const usePaginatedStudentsQuery = (params: PaginationParams, enabled: boolean = true) => {
     return useQuery({
         queryKey: [STUDENT_KEYS.paginated, params],
         queryFn: () => fetchPaginatedStudents(params),
         staleTime: 1000 * 60,
+        enabled
     });
 };
 

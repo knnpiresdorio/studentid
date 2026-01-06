@@ -1,4 +1,5 @@
 import React, { createContext, useContext, ReactNode } from 'react';
+import { useAuth } from './AuthContext';
 import { Partner } from '../types';
 import {
     usePartnersQuery,
@@ -19,7 +20,8 @@ interface PartnerContextType {
 const PartnerContext = createContext<PartnerContextType | undefined>(undefined);
 
 export const PartnerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { data: partners = [], isLoading, error } = usePartnersQuery();
+    const { user } = useAuth();
+    const { data: partners = [], isLoading, error } = usePartnersQuery(!!user);
 
     const upsertPartnerMutation = useUpsertPartnerMutation();
     const deletePartnerMutation = useDeletePartnerMutation();

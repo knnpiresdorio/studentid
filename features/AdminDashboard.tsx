@@ -64,6 +64,7 @@ import {
     useStudentStatsQuery,
     fetchStudentById
 } from '../hooks/useSupabaseQuery';
+import { HeaderControls } from '../components/HeaderControls';
 import { Badge } from '../components/ui/Badge';
 import { maskCPF } from '../utils/masking';
 import { SchoolList } from './admin/schools/SchoolList';
@@ -645,34 +646,37 @@ export const AdminDashboard = ({
                     )}
 
                     {/* Global Action Buttons for Super Admin */}
-                    {isSuperAdmin && !managedSchool && (
-                        <div className="flex gap-3">
-                            {activeSection === 'schools' && (
-                                <button
-                                    onClick={() => { setEditingSchool(null); setIsSchoolModalOpen(true); }}
-                                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-lg shadow-indigo-900/40 hover:-translate-y-0.5"
-                                >
-                                    <Plus size={18} /> Nova Escola
-                                </button>
-                            )}
-                            {activeSection === 'students' && (
-                                <button
-                                    onClick={() => { setEditingStudent(null); setIsStudentModalOpen(true); }}
-                                    className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-lg shadow-blue-900/40 hover:-translate-y-0.5"
-                                >
-                                    <UserPlus size={18} /> Novo Membro
-                                </button>
-                            )}
-                            {activeSection === 'partners' && (
-                                <button
-                                    onClick={() => openPartnerModal()}
-                                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-lg shadow-emerald-900/40 hover:-translate-y-0.5"
-                                >
-                                    <Store size={18} /> Novo Parceiro
-                                </button>
-                            )}
-                        </div>
-                    )}
+                    <div className="flex items-center gap-4">
+                        <HeaderControls />
+                        {isSuperAdmin && !managedSchool && (
+                            <div className="flex gap-3">
+                                {activeSection === 'schools' && (
+                                    <button
+                                        onClick={() => { setEditingSchool(null); setIsSchoolModalOpen(true); }}
+                                        className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-lg shadow-indigo-900/40 hover:-translate-y-0.5"
+                                    >
+                                        <Plus size={18} /> Nova Escola
+                                    </button>
+                                )}
+                                {activeSection === 'students' && (
+                                    <button
+                                        onClick={() => { setEditingStudent(null); setIsStudentModalOpen(true); }}
+                                        className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-lg shadow-blue-900/40 hover:-translate-y-0.5"
+                                    >
+                                        <UserPlus size={18} /> Novo Membro
+                                    </button>
+                                )}
+                                {activeSection === 'partners' && (
+                                    <button
+                                        onClick={() => openPartnerModal()}
+                                        className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-lg shadow-emerald-900/40 hover:-translate-y-0.5"
+                                    >
+                                        <Store size={18} /> Novo Parceiro
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </header>
 
                 <div className="p-8 pt-28 lg:p-8">

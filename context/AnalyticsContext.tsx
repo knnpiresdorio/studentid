@@ -1,5 +1,6 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from './AuthContext';
 import { AuditLog, ActionType, UserRole } from '../types';
 import { supabase } from '../services/supabase';
 import {
@@ -25,7 +26,8 @@ interface AnalyticsContextType {
 const AnalyticsContext = createContext<AnalyticsContextType | undefined>(undefined);
 
 export const AnalyticsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { data: auditLogs = [], isLoading, error } = useAuditLogsQuery();
+    const { user } = useAuth();
+    const { data: auditLogs = [], isLoading, error } = useAuditLogsQuery(!!user);
     const queryClient = useQueryClient();
 
     const addAuditLog = async (

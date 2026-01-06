@@ -11,7 +11,7 @@ import { BenefitsList } from './student/benefits/BenefitsList';
 import { DependentManager } from './student/profile/DependentManager';
 import { ActivityTrail } from './student/activity/ActivityTrail';
 import { InviteLinkManager } from './invites/InviteLinkManager';
-import { StudentNotificationToggle } from '../components/StudentNotificationToggle';
+import { HeaderControls } from '../components/HeaderControls';
 
 // Hooks
 import { useStudentBenefits } from './student/hooks/useStudentBenefits';
@@ -160,8 +160,8 @@ export const StudentView: React.FC<StudentViewProps> = ({
             userName={user.name}
             userPhoto={user.studentData?.photoUrl}
             headerAction={activeTab === 'id' ? (
-                <div className="flex gap-2">
-                    <StudentNotificationToggle />
+                <div className="flex gap-2 items-center">
+                    <HeaderControls />
                     <button
                         onClick={() => setShowPhotoUploadConfirmation(true)}
                         className="p-2 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-full active:scale-95 transition-all"

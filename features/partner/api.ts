@@ -17,11 +17,12 @@ const fetchPartners = async (): Promise<Partner[]> => {
     return (data && data.length > 0) ? data : MOCK_PARTNERS;
 };
 
-export const usePartnersQuery = () => {
+export const usePartnersQuery = (enabled: boolean = true) => {
     return useQuery({
         queryKey: [PARTNER_KEYS.all],
         queryFn: fetchPartners,
         staleTime: 1000 * 60 * 5,
+        enabled
     });
 };
 

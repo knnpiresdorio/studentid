@@ -15,6 +15,7 @@ import { usePartnerScanner } from './hooks/usePartnerScanner';
 import { useValidationHistory } from './hooks/useValidationHistory';
 import { PromotionManager } from './promotions/PromotionManager';
 import { ScannerView } from './validation/ScannerView';
+import { HeaderControls } from '../../components/HeaderControls';
 
 // Chart components moved to MetricsDashboard
 
@@ -208,7 +209,10 @@ export const StoreView: React.FC = () => {
                         </div>
                         <h1 className="font-bold text-slate-800">{user?.role === 'STORE_ADMIN' ? 'Gestor' : 'Parceiro'}</h1>
                     </div>
-                    <button onClick={logout} className="p-2 text-slate-400 hover:text-red-500 focus-visible:ring-2 focus-visible:ring-red-500 outline-none rounded-lg" aria-label="Sair do sistema"><LogOut size={20} /></button>
+                    <div className="flex items-center gap-2">
+                        <HeaderControls />
+                        <button onClick={logout} className="p-2 text-slate-400 hover:text-red-500 focus-visible:ring-2 focus-visible:ring-red-500 outline-none rounded-lg" aria-label="Sair do sistema"><LogOut size={20} /></button>
+                    </div>
                 </header>
 
                 <div className="p-4 pt-24 lg:p-10 max-w-5xl mx-auto">

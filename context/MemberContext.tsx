@@ -1,4 +1,5 @@
 import React, { createContext, useContext, ReactNode } from 'react';
+import { useAuth } from './AuthContext';
 import { Student, School, ChangeRequest } from '../types';
 import {
     useSchoolsQuery,
@@ -25,8 +26,9 @@ interface MemberContextType {
 const MemberContext = createContext<MemberContextType | undefined>(undefined);
 
 export const MemberProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { data: schools = [], isLoading: loadingSchools, error: errorSchools } = useSchoolsQuery();
-    const { data: changeRequests = [], isLoading: loadingReq, error: errorReq } = useChangeRequestsQuery();
+    const { user } = useAuth();
+    const { data: schools = [], isLoading: loadingSchools, error: errorSchools } = useSchoolsQuery(!!user);
+    const { data: changeRequests = [], isLoading: loadingReq, error: errorReq } = useChangeRequestsQuery(!!user);
 
     const upsertStudentMutation = useUpsertStudentMutation();
     const deleteStudentMutation = useDeleteStudentMutation();

@@ -44,27 +44,30 @@ export const fetchPaginatedAuditLogs = async ({ page, pageSize, searchTerm, scho
     return { data: data || [], count: count || 0 };
 };
 
-export const useSchoolsQuery = () => {
+export const useSchoolsQuery = (enabled: boolean = true) => {
     return useQuery({
         queryKey: [ADMIN_KEYS.schools],
         queryFn: fetchSchools,
         staleTime: 1000 * 60 * 60, // Schools change rarely
+        enabled
     });
 };
 
-export const useAuditLogsQuery = () => {
+export const useAuditLogsQuery = (enabled: boolean = true) => {
     return useQuery({
         queryKey: [ADMIN_KEYS.audit],
         queryFn: fetchAuditLogs,
         staleTime: 1000 * 30,
+        enabled
     });
 };
 
-export const usePaginatedAuditLogsQuery = (params: PaginationParams) => {
+export const usePaginatedAuditLogsQuery = (params: PaginationParams, enabled: boolean = true) => {
     return useQuery({
         queryKey: [ADMIN_KEYS.paginatedAudit, params],
         queryFn: () => fetchPaginatedAuditLogs(params),
         staleTime: 1000 * 10,
+        enabled
     });
 };
 
