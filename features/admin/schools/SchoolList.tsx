@@ -28,7 +28,7 @@ export const SchoolList: React.FC<SchoolListProps> = ({
                                 <Settings size={16} />
                             </div>
                         </div>
-                        <div className="absolute -bottom-8 right-6 w-20 h-20 bg-slate-900 rounded-2xl shadow-2xl border border-white/10 p-2 z-10 group-hover:scale-110 transition-transform duration-300">
+                        <div className="absolute -bottom-3 right-6 w-20 h-20 bg-slate-900 rounded-2xl shadow-2xl border border-white/10 p-2 z-10 group-hover:scale-110 transition-transform duration-300">
                             <img src={school.logoUrl} className="w-full h-full object-contain rounded-xl bg-white" alt="Logo" />
                         </div>
                         <div className="z-10 text-white w-3/4">
