@@ -14,6 +14,7 @@ import {
     CheckCircle
 } from 'lucide-react';
 import { AppUser } from '../types';
+import { supabase } from '../services/supabase';
 
 interface LoginScreenProps {
     users?: AppUser[];
@@ -109,12 +110,25 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
         }
     };
 
-    const handleForgotSubmit = (e: React.FormEvent) => {
+    const handleForgotSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Simulate API call
-        setTimeout(() => {
+        setError('');
+
+        try {
+            const { error: resetError } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+                redirectTo: `${window.location.origin}/login?view=CHANGE_PASSWORD`,
+            });
+
+            if (resetError) {
+                setError(resetError.message);
+                return;
+            }
+
             setForgotSuccess(true);
-        }, 1000);
+        } catch (err: any) {
+            setError('Ocorreu um erro ao tentar enviar o e-mail de recuperação.');
+            console.error('Reset password error:', err);
+        }
     };
 
     const toggleView = (newView: ViewState) => {
