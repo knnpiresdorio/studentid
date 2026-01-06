@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { X, Store, Upload, ChevronRight, Plus, Tag, Trash2 } from 'lucide-react';
-import { Partner, Promotion } from '../../types';
+import { Partner, Promotion, School } from '../../types';
 import { useForm, useFieldArray, Controller, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PartnerSchema, partnerSchema } from '../../schemas';
 import { formatPhone, BRAZIL_STATES } from '../../utils/formatters';
-import { ShieldCheck, Instagram, Facebook, Globe, Phone, ChevronDown } from 'lucide-react';
+import { ShieldCheck, Instagram, Facebook, Globe, Phone, ChevronDown, GraduationCap } from 'lucide-react';
 
 interface PartnerModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (partnerData: Partner, userData?: { username?: string, password?: string }) => void;
     partner: Partner | null;
+    schools: School[];
     initialData?: Partial<Partner>;
     withUserCreation?: boolean;
 }
@@ -21,6 +22,7 @@ export const PartnerModal: React.FC<PartnerModalProps> = ({
     onClose,
     onSave,
     partner,
+    schools = [],
     initialData,
     withUserCreation = false
 }) => {
@@ -124,6 +126,26 @@ export const PartnerModal: React.FC<PartnerModalProps> = ({
                 </div>
 
                 <div className="space-y-5">
+                    <div>
+                        <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wide flex items-center gap-1.5">
+                            <GraduationCap size={12} className="text-purple-400" /> Instituição Vinculada
+                        </label>
+                        <div className="relative">
+                            <select
+                                className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 text-white font-medium focus:ring-2 focus:ring-purple-500/50 outline-none transition-all appearance-none cursor-pointer"
+                                {...register('schoolId')}
+                            >
+                                <option value="" className="bg-slate-900 text-slate-500">Selecione uma instituição...</option>
+                                <option value="unipass-central" className="bg-slate-900">UniPass Central (Geral)</option>
+                                {schools.map(s => (
+                                    <option key={s.id} value={s.id} className="bg-slate-900">{s.name}</option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-3 top-3.5 text-slate-500 pointer-events-none" size={16} />
+                        </div>
+                        {errors.schoolId && <span className="text-red-400 text-xs mt-1">{errors.schoolId.message}</span>}
+                    </div>
+
                     <div>
                         <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wide">Nome do Parceiro</label>
                         <input className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 text-white font-bold focus:ring-2 focus:ring-purple-500/50 outline-none transition-all placeholder-slate-600" {...register('name')} placeholder="Nome do estabelecimento" />

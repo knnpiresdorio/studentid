@@ -12,9 +12,9 @@ const fetchPartners = async (): Promise<Partner[]> => {
     const { data, error } = await supabase.from('partners').select('*');
     if (error) {
         console.error('Supabase error:', error);
-        return MOCK_PARTNERS;
+        throw error;
     }
-    return (data && data.length > 0) ? data : MOCK_PARTNERS;
+    return data || [];
 };
 
 export const usePartnersQuery = (enabled: boolean = true) => {

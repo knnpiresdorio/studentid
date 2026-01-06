@@ -439,6 +439,7 @@ export const AdminDashboard = ({
                 onClose={() => setIsPartnerModalOpen(false)}
                 onSave={(data) => handleSavePartner(data, upsertPartner, addAuditLog, user)}
                 partner={editingPartner}
+                schools={schools}
             />
 
             <SchoolModal
@@ -552,29 +553,6 @@ export const AdminDashboard = ({
                 </div>
             )}
 
-            {/* Student Form Modal */}
-            <StudentModal
-                isOpen={isStudentModalOpen}
-                onClose={() => setIsStudentModalOpen(false)}
-                onSave={handleSaveStudent}
-                student={editingStudent}
-                initialData={{
-                    isActive: true,
-                    schoolId: managedSchool?.id,
-                    schoolName: managedSchool?.name,
-                    schoolType: managedSchool?.type
-                }}
-                showDependentsTab={false}
-            />
-
-            {/* Partner Form Modal */}
-            <PartnerModal
-                isOpen={isPartnerModalOpen}
-                onClose={() => setIsPartnerModalOpen(false)}
-                onSave={(data) => handleSavePartner(data, upsertPartner, addAuditLog, user)}
-                editingPartner={editingPartner}
-                schools={schools}
-            />
 
 
             {/* Sidebar */}
