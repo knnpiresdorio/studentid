@@ -29,8 +29,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 .single();
 
             if (error) {
-                console.warn('Profile not found or error:', error.message);
-                return null;
+                console.warn('Profile fetch error:', error.message);
+                return { profile: null, error: error.message };
             }
 
             if (data) {
@@ -42,12 +42,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     role: data.role as UserRole,
                     schoolId: data.school_id,
                 };
-                return appUser;
+                return { profile: appUser, error: null };
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error('Unexpected error fetching profile:', err);
+            return { profile: null, error: err.message };
         }
-        return null;
+        return { profile: null, error: 'Usuário não encontrado' };
     };
 
     const login = (loggedInUser: AppUser) => {
@@ -75,12 +76,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             try {
                 if (session?.user) {
-                    const profile = await fetchProfile(session.user.id, session.user.email);
+                    const { profile, error: profileError } = await fetchProfile(session.user.id, session.user.email);
                     if (mounted) {
                         if (profile) {
                             setUser(profile);
                         } else {
-                            setAuthError('Perfil não encontrado no banco de dados. Contate o suporte.');
+                            setAuthError(profileError || 'Perfil não encontrado. Verifique se o usuário existe na tabela profiles.');
                             setUser(null);
                         }
                     }

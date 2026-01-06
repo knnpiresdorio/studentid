@@ -52,6 +52,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
         }
     }, []);
 
+    // Reset processing state if an error comes from the context
+    useEffect(() => {
+        if (authError) {
+            setIsProcessing(false);
+        }
+    }, [authError]);
+
     const handleLoginSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -59,6 +66,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
 
         const cleanUsername = username.trim();
         const cleanPassword = password.trim();
+
+        console.log('Attempting login with:', cleanUsername);
 
         const isCPF = /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/.test(cleanUsername) || /^\d{11}$/.test(cleanUsername);
 
@@ -306,8 +315,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
                                 </div>
 
                                 {(error || authError) && (
-                                    <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg flex items-center gap-2 border border-red-100">
-                                        <span>⚠️</span> {error || authError}
+                                    <div className="bg-red-50 text-red-600 text-sm p-4 rounded-xl flex items-start gap-3 border border-red-100 animate-shake">
+                                        <span className="text-lg mt-0.5">⚠️</span>
+                                        <div className="flex-1">
+                                            <p className="font-semibold mb-0.5">Ops! Algo deu errado</p>
+                                            <p className="text-red-500/80 text-xs leading-relaxed">{error || authError}</p>
+                                        </div>
                                     </div>
                                 )}
 
@@ -378,6 +391,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
                                             />
                                         </div>
                                     </div>
+
+                                    {(error || authError) && (
+                                        <div className="bg-red-50 text-red-600 text-sm p-4 rounded-xl flex items-start gap-3 border border-red-100 mb-6">
+                                            <span>⚠️</span>
+                                            <div className="flex-1">
+                                                <p className="font-semibold text-xs uppercase tracking-wider mb-1">Erro</p>
+                                                <p className="text-red-500/80 text-xs leading-relaxed">{error || authError}</p>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     <button
                                         type="submit"
@@ -471,9 +494,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
                                     </div>
                                 </div>
 
-                                {error && (
-                                    <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg flex items-center gap-2 border border-red-100">
-                                        <span>⚠️</span> {error}
+                                {(error || authError) && (
+                                    <div className="bg-red-50 text-red-600 text-sm p-4 rounded-xl flex items-start gap-3 border border-red-100">
+                                        <span>⚠️</span>
+                                        <div className="flex-1">
+                                            <p className="font-semibold text-xs uppercase tracking-wider mb-1">Erro</p>
+                                            <p className="text-red-500/80 text-xs">{error || authError}</p>
+                                        </div>
                                     </div>
                                 )}
 
