@@ -17,7 +17,7 @@ const fetchSchools = async (): Promise<School[]> => {
 const fetchAuditLogs = async (): Promise<AuditLog[]> => {
     // Limit to reasonable amount for context if needed, but Context currently fetches all?
     // Originally useAuditLogsQuery fetched all. Better to limit or use pagination.
-    const { data, error } = await supabase.from('audit_logs').select('*').order('timestamp', { ascending: false }).limit(200);
+    const { data, error } = await supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(200);
     if (error) throw error;
     return data || [];
 };
@@ -26,7 +26,7 @@ export const fetchPaginatedAuditLogs = async ({ page, pageSize, searchTerm, scho
     let query = supabase.from('audit_logs').select('*', { count: 'exact' });
 
     if (schoolId) {
-        query = query.eq('schoolId', schoolId);
+        query = query.eq('school_id', schoolId);
     }
 
     if (searchTerm) {
@@ -37,7 +37,7 @@ export const fetchPaginatedAuditLogs = async ({ page, pageSize, searchTerm, scho
     const to = from + pageSize - 1;
 
     const { data, error, count } = await query
-        .order('timestamp', { ascending: false })
+        .order('created_at', { ascending: false })
         .range(from, to);
 
     if (error) throw error;

@@ -39,8 +39,24 @@ export const AnalyticsProvider: React.FC<{ children: ReactNode }> = ({ children 
         actorRole: UserRole,
         metadata?: any
     ) => {
-        const newLog: AuditLog = {
-            id: `log${Date.now()}`,
+        const logData = {
+            school_id: schoolId || null,
+            user_id: actorId,
+            actor_name: actorName,
+            actor_role: actorRole,
+            action: action,
+            details: details,
+            metadata: {
+                userAgent: navigator.userAgent,
+                ipAddress: '127.0.0.1',
+                location: 'Unknown',
+                ...metadata
+            }
+        };
+
+        // Optimistic update (we create a temporary UI-friendly log)
+        const optimisticLog: AuditLog = {
+            id: `temp-${Date.now()}`,
             schoolId,
             actorId,
             actorName,
@@ -48,25 +64,18 @@ export const AnalyticsProvider: React.FC<{ children: ReactNode }> = ({ children 
             action: action as ActionType,
             targetStudent: '-',
             details,
-            metadata: {
-                userAgent: navigator.userAgent,
-                ipAddress: '127.0.0.1', // Ideally this comes from backend
-                location: 'Unknown',
-                ...metadata
-            },
+            metadata: logData.metadata,
             timestamp: new Date().toISOString()
         };
 
-        // Optimistic update
         await queryClient.cancelQueries({ queryKey: [QUERY_KEYS.audit] });
-        queryClient.setQueryData<AuditLog[]>([QUERY_KEYS.audit], old => [newLog, ...(old || [])]);
+        queryClient.setQueryData<AuditLog[]>([QUERY_KEYS.audit], old => [optimisticLog, ...(old || [])]);
 
         try {
-            const { error } = await supabase.from('audit_logs').insert(newLog);
+            const { error } = await supabase.from('audit_logs').insert(logData);
             if (error) throw error;
         } catch (err) {
             console.error("Error logging audit:", err);
-            // Revert or show error if critical
         } finally {
             queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.audit] });
         }
