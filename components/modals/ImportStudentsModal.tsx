@@ -53,7 +53,7 @@ export const ImportStudentsModal: React.FC<ImportStudentsModalProps> = ({
                 </div>
 
                 <div className="p-8 overflow-y-auto">
-                    {importData.length === 0 && !isParsing ? (
+                    {importData.length === 0 && errors.length === 0 && !isParsing ? (
                         <div className="space-y-6">
                             <div className="border-2 border-dashed border-slate-200 dark:border-white/10 rounded-2xl p-12 text-center hover:border-indigo-400 dark:hover:border-indigo-500/50 transition-all group cursor-pointer relative">
                                 <input
