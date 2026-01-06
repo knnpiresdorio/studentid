@@ -6,6 +6,7 @@ import { supabase } from '../services/supabase';
 interface AuthContextType {
     user: AppUser | null;
     loading: boolean;
+    authError: string | null;
     login: (user: AppUser) => void;
     logout: () => Promise<void>;
     refreshProfile: () => Promise<void>;
@@ -16,6 +17,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<AppUser | null>(null);
     const [loading, setLoading] = useState(true);
+    const [authError, setAuthError] = useState<string | null>(null);
 
     const fetchProfile = async (userId: string, email?: string) => {
         try {
@@ -69,19 +71,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         const handleAuthChange = async (session: any) => {
             console.log('Auth state change detected. Session:', session ? 'Present' : 'None');
+            setAuthError(null);
 
             try {
                 if (session?.user) {
                     const profile = await fetchProfile(session.user.id, session.user.email);
                     if (mounted) {
-                        setUser(profile);
+                        if (profile) {
+                            setUser(profile);
+                        } else {
+                            setAuthError('Perfil não encontrado no banco de dados. Contate o suporte.');
+                            setUser(null);
+                        }
                     }
                 } else {
                     if (mounted) setUser(null);
                 }
-            } catch (err) {
+            } catch (err: any) {
                 console.error('Error in handleAuthChange:', err);
-                if (mounted) setUser(null);
+                if (mounted) {
+                    setAuthError('Erro ao carregar seu perfil: ' + err.message);
+                    setUser(null);
+                }
             } finally {
                 if (mounted) {
                     console.log('Setting loading to false');
@@ -116,7 +127,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout, refreshProfile }}>
+        <AuthContext.Provider value={{ user, loading, authError, login, logout, refreshProfile }}>
             {children}
         </AuthContext.Provider>
     );

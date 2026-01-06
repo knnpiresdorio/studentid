@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { AppUser } from '../types';
 import { supabase } from '../services/supabase';
+import { useAuth } from '../context/AuthContext';
 
 interface LoginScreenProps {
     users?: AppUser[];
@@ -25,6 +26,7 @@ interface LoginScreenProps {
 type ViewState = 'LOGIN' | 'FORGOT_PASSWORD' | 'CHANGE_PASSWORD';
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, onPasswordUpdate }) => {
+    const { authError } = useAuth();
     const [view, setView] = useState<ViewState>('LOGIN');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -32,6 +34,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
     const [rememberMe, setRememberMe] = useState(false);
     const [error, setError] = useState('');
     const [authorizedUser, setAuthorizedUser] = useState<AppUser | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     // New Password State
     const [newPassword, setNewPassword] = useState('');
@@ -52,34 +55,47 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
     const handleLoginSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setIsProcessing(true);
 
-        const isCPF = /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/.test(username) || /^\d{11}$/.test(username);
+        const cleanUsername = username.trim();
+        const cleanPassword = password.trim();
+
+        const isCPF = /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/.test(cleanUsername) || /^\d{11}$/.test(cleanUsername);
 
         if (isCPF) {
-            // For security and RLS reasons, we don't look up CPFs on the frontend.
-            // We advise the user to use their registered email.
             setError('Para sua segurança, utilize o e-mail cadastrado. Caso não lembre qual e-mail está vinculado ao seu CPF, contate o suporte.');
+            setIsProcessing(false);
             return;
         }
 
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({
-            email: username,
-            password: password,
-        });
+        try {
+            const { data, error: signInError } = await supabase.auth.signInWithPassword({
+                email: cleanUsername,
+                password: cleanPassword,
+            });
 
-        if (signInError) {
-            // Unified error message to prevent account enumeration
-            setError('E-mail ou senha incorretos.');
-            return;
-        }
-
-        if (data.user) {
-            if (rememberMe) {
-                localStorage.setItem('unipass_last_user', username);
-            } else {
-                localStorage.removeItem('unipass_last_user');
+            if (signInError) {
+                console.warn('Login failure:', signInError.message);
+                if (signInError.message === 'Invalid login credentials') {
+                    setError('E-mail ou senha incorretos.');
+                } else {
+                    setError(signInError.message);
+                }
+                setIsProcessing(false);
+                return;
             }
-            // onLogin will be handled by AuthContext's onAuthStateChange listener
+
+            if (data.user) {
+                if (rememberMe) {
+                    localStorage.setItem('unipass_last_user', cleanUsername);
+                } else {
+                    localStorage.removeItem('unipass_last_user');
+                }
+                // Redirection will be handled by AuthContext.tsx listener
+            }
+        } catch (err: any) {
+            setError('Erro inesperado: ' + err.message);
+            setIsProcessing(false);
         }
     };
 
@@ -289,18 +305,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
                                     </button>
                                 </div>
 
-                                {error && (
+                                {(error || authError) && (
                                     <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg flex items-center gap-2 border border-red-100">
-                                        <span>⚠️</span> {error}
+                                        <span>⚠️</span> {error || authError}
                                     </div>
                                 )}
 
                                 <button
                                     type="submit"
-                                    className="w-full bg-[#5664F5] hover:bg-[#4351e0] text-white font-bold py-4 px-4 rounded-xl transition-all shadow-lg shadow-indigo-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 group"
+                                    disabled={isProcessing}
+                                    className="w-full bg-[#5664F5] hover:bg-[#4351e0] disabled:bg-[#a5acf8] text-white font-bold py-4 px-4 rounded-xl transition-all shadow-lg shadow-indigo-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 group"
                                 >
-                                    ENTRAR NO UNIPASS
-                                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                    {isProcessing ? 'ENTRANDO...' : 'ENTRAR NO UNIPASS'}
+                                    {!isProcessing && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
                                 </button>
                             </form>
                         </div>
