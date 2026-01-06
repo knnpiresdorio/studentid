@@ -19,6 +19,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const fetchProfile = async (userId: string) => {
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const email = session?.user?.email;
+
             const { data, error } = await supabase
                 .from('profiles')
                 .select('*')
@@ -35,6 +38,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     id: data.id,
                     username: data.cpf || data.full_name, // Fallback
                     name: data.full_name,
+                    email: email || undefined,
                     role: data.role as UserRole,
                     schoolId: data.school_id,
                     // Map other fields if necessary

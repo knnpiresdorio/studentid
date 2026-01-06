@@ -53,57 +53,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
         e.preventDefault();
         setError('');
 
-        let emailToSignIn = username;
-
-        // Check if the input is a CPF (basic check for numbers and length or format)
-        const isCPF = /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/.test(username);
+        const isCPF = /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/.test(username) || /^\d{11}$/.test(username);
 
         if (isCPF) {
-            // Remove formatting to search
-            const cleanCPF = username.replace(/\D/g, '');
-            const { data: profile, error: profileError } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('cpf', cleanCPF)
-                .single();
-
-            if (profileError || !profile) {
-                setError('CPF não encontrado ou sem e-mail vinculado.');
-                return;
-            }
-
-            // In Supabase Auth, we need the email. 
-            // Since we only have the ID from profiles, we might need a way to get the email.
-            // However, usually the admin creates the user with an email.
-            // If we don't store email in profiles, we might need to adjust or assume username IS email if not CPF.
-            // Let's check if we can get the email from the profile if we add it there, 
-            // or if we should use a helper function.
-            // For now, let's assume the user MUST provide email or we need to fetch it.
-
-            // RE-CHECK: If the user provided a CPF, we need the email to sign in via Supabase Auth.
-            // Let's assume the 'profiles' table should have the email too, OR we use a RPC.
-            // Since I can't modify the schema right now easily without confirmation, 
-            // I'll check if the 'profiles' has email. (Based on previous list_tables, it didn't show email in 'profiles')
-
-            // Wait, the screenshot shows 'ceasar.solucoes@gmail.com' being typed.
-            // If it's an email, we use it directly.
-            // If CPF, we need to find the email. 
-
-            setError('Para entrar com CPF, entre em contato com o suporte para vincular seu e-mail.');
+            // For security and RLS reasons, we don't look up CPFs on the frontend.
+            // We advise the user to use their registered email.
+            setError('Para sua segurança, utilize o e-mail cadastrado. Caso não lembre qual e-mail está vinculado ao seu CPF, contate o suporte.');
             return;
         }
 
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
-            email: emailToSignIn,
+            email: username,
             password: password,
         });
 
         if (signInError) {
-            if (signInError.message === 'Invalid login credentials') {
-                setError('E-mail ou senha incorretos.');
-            } else {
-                setError(signInError.message);
-            }
+            // Unified error message to prevent account enumeration
+            setError('E-mail ou senha incorretos.');
             return;
         }
 
@@ -113,7 +79,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
             } else {
                 localStorage.removeItem('unipass_last_user');
             }
-            // onLogin will be handled by AuthContext's onAuthStateChange
+            // onLogin will be handled by AuthContext's onAuthStateChange listener
         }
     };
 

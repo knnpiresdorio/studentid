@@ -108,6 +108,7 @@ export interface AppUser {
   username: string;
   role: UserRole;
   name: string;
+  email?: string; // Real user email from Supabase Auth
   password?: string; // For mock user management (resetting password)
   studentData?: Student; // Only if role is STUDENT
   schoolId?: string; // Only if role is SCHOOL_ADMIN
