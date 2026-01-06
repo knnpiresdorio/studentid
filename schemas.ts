@@ -7,7 +7,7 @@ export const dependentSchema = z.object({
     relation: z.string().min(1, 'Grau de parentesco é obrigatório'),
     cpf: z.string().regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, 'CPF deve estar no formato 000.000.000-00').optional().or(z.literal('')),
     birthDate: z.string().min(1, 'Data de nascimento é obrigatória').optional().or(z.literal('')),
-    photoUrl: z.string().regex(/^(https?:\/\/|data:image\/)/, 'URL da foto inválida').optional().or(z.literal('')),
+    photoUrl: z.string().regex(/^(https?:\/\/|data:image\/|blob:)/, 'URL da foto inválida').optional().or(z.literal('')),
     city: z.string().optional().or(z.literal('')),
     state: z.string().optional().or(z.literal('')),
     isActive: z.boolean().optional(),
@@ -17,7 +17,7 @@ export const studentSchema = z.object({
     id: z.string().optional(),
     fullName: z.string().min(3, 'O nome deve ter pelo menos 3 caracteres'),
     cpf: z.string().regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, 'CPF deve estar no formato 000.000.000-00'),
-    photoUrl: z.string().regex(/^(https?:\/\/|data:image\/)/, 'URL da foto inválida').or(z.literal('')),
+    photoUrl: z.string().regex(/^(https?:\/\/|data:image\/|blob:)/, 'URL da foto inválida').or(z.literal('')),
     schoolId: z.string().min(1, 'Instituição é obrigatória'),
     schoolName: z.string().optional(), // Often derived
     schoolType: z.nativeEnum(SchoolType).optional(), // Often derived
@@ -54,8 +54,8 @@ export const partnerSchema = z.object({
     city: z.string().optional(),
     state: z.string().length(2, 'UF deve ter 2 caracteres').optional(),
     description: z.string().max(500, 'Descrição não pode exceder 500 caracteres'),
-    logoUrl: z.string().regex(/^(https?:\/\/|data:image\/)/, 'URL da logo inválida'),
-    bannerUrl: z.string().regex(/^(https?:\/\/|data:image\/)/, 'URL do banner inválida').optional().or(z.literal('')),
+    logoUrl: z.string().regex(/^(https?:\/\/|data:image\/|blob:)/, 'URL da logo inválida'),
+    bannerUrl: z.string().regex(/^(https?:\/\/|data:image\/|blob:)/, 'URL do banner inválida').optional().or(z.literal('')),
     phoneNumber: z.string().regex(/^\(?\d{2}\)?\s?\d{4,5}-?\d{4}$/, 'Telefone inválido (Ex: 11 99999-9999)').optional().or(z.literal('')),
     instagramUrl: z.string().url('URL inválida').optional().or(z.literal('')),
     facebookUrl: z.string().url('URL inválida').optional().or(z.literal('')),
@@ -73,7 +73,7 @@ export const partnerSchema = z.object({
 export const schoolSchema = z.object({
     id: z.string().optional(),
     name: z.string().min(3, 'Nome da instituição deve ter pelo menos 3 caracteres'),
-    logoUrl: z.string().regex(/^(https?:\/\/|data:image\/)/, 'URL da logo inválida'),
+    logoUrl: z.string().regex(/^(https?:\/\/|data:image\/|blob:)/, 'URL da logo inválida'),
     type: z.nativeEnum(SchoolType),
     isActive: z.boolean(),
     description: z.string().optional().or(z.literal('')),
