@@ -88,9 +88,9 @@ interface AdminDashboardProps {
 }
 
 export const AdminDashboard = ({
-    schools,
-    partners,
-    auditLogs, addAuditLog,
+    schools = [],
+    partners = [],
+    auditLogs = [], addAuditLog,
     onLogout
 }: AdminDashboardProps) => {
     const { user } = useAuth();

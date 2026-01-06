@@ -120,7 +120,7 @@ export interface VerificationResult {
   valid: boolean;
   student?: Student;
   message: string;
-  timestamp: string;
+  created_at: string;
   method?: 'QR' | 'CPF';
 }
 
@@ -179,7 +179,7 @@ export interface AuditLog {
     location?: string;
     [key: string]: any;
   };
-  timestamp: string;
+  created_at: string;
 }
 
 // API Types

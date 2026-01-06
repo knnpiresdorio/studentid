@@ -9,7 +9,8 @@ import {
     Upload
 } from 'lucide-react';
 import { Student, MemberType, UserRole, School, Dependent } from '../../types';
-import { useForm, useFieldArray, Controller, SubmitHandler } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import type { SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { StudentSchema, studentSchema } from '../../schemas';
 import { formatCPF, BRAZIL_STATES } from '../../utils/formatters';

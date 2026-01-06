@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { X, Store, Upload, ChevronRight, Plus, Tag, Trash2 } from 'lucide-react';
+import {
+    X, Store, Upload, ChevronRight, Plus, Tag, Trash2,
+    ShieldCheck, Instagram, Facebook, Globe, Phone, ChevronDown, GraduationCap
+} from 'lucide-react';
 import { Partner, Promotion, School } from '../../types';
-import { useForm, useFieldArray, Controller, SubmitHandler } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import type { SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PartnerSchema, partnerSchema } from '../../schemas';
 import { formatPhone, BRAZIL_STATES } from '../../utils/formatters';
-import { ShieldCheck, Instagram, Facebook, Globe, Phone, ChevronDown, GraduationCap } from 'lucide-react';
 
 interface PartnerModalProps {
     isOpen: boolean;
@@ -68,7 +71,7 @@ export const PartnerModal: React.FC<PartnerModalProps> = ({
                 reset({
                     isActive: true,
                     activePromotions: [],
-                    schoolId: 'unipass-central',
+                    schoolId: '',
                     ...initialData
                 });
                 setLogoUploadMode('url');
@@ -128,15 +131,14 @@ export const PartnerModal: React.FC<PartnerModalProps> = ({
                 <div className="space-y-5">
                     <div>
                         <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wide flex items-center gap-1.5">
-                            <GraduationCap size={12} className="text-purple-400" /> Instituição Vinculada
+                            <GraduationCap size={12} className="text-purple-400" /> Instituição Vinculada <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
                             <select
                                 className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 text-white font-medium focus:ring-2 focus:ring-purple-500/50 outline-none transition-all appearance-none cursor-pointer"
                                 {...register('schoolId')}
                             >
-                                <option value="" className="bg-slate-900 text-slate-500">Selecione uma instituição...</option>
-                                <option value="unipass-central" className="bg-slate-900">UniPass Central (Geral)</option>
+                                <option value="" disabled className="bg-slate-900 text-slate-500">Selecione uma instituição...</option>
                                 {schools.map(s => (
                                     <option key={s.id} value={s.id} className="bg-slate-900">{s.name}</option>
                                 ))}

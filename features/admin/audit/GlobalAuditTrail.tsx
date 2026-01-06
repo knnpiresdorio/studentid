@@ -60,7 +60,7 @@ export const GlobalAuditTrail: React.FC<GlobalAuditTrailProps> = ({
                             <tr><td colSpan={5} className="p-10 text-center text-slate-500 italic">Carregando logs de auditoria...</td></tr>
                         ) : data.map(log => (
                             <tr key={log.id} className="hover:bg-white/5 transition-colors group">
-                                <td className="px-6 py-4 font-mono text-xs text-slate-500">{new Date(log.timestamp).toLocaleString('pt-BR')}</td>
+                                <td className="px-6 py-4 font-mono text-xs text-slate-500">{new Date(log.created_at).toLocaleString('pt-BR')}</td>
                                 <td className="px-6 py-4 font-bold text-white group-hover:text-blue-400 transition-colors">
                                     {log.actorName}
                                     <span className="block text-[10px] text-slate-500 font-normal">{log.actorRole}</span>

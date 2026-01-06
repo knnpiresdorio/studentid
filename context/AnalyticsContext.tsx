@@ -65,7 +65,7 @@ export const AnalyticsProvider: React.FC<{ children: ReactNode }> = ({ children 
             targetStudent: '-',
             details,
             metadata: logData.metadata,
-            timestamp: new Date().toISOString()
+            created_at: new Date().toISOString()
         };
 
         await queryClient.cancelQueries({ queryKey: [QUERY_KEYS.audit] });

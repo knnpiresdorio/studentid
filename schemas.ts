@@ -45,7 +45,7 @@ export const promotionSchema = z.object({
 
 export const partnerSchema = z.object({
     id: z.string().optional(),
-    schoolId: z.string().min(1, 'ID da escola obrigatório'),
+    schoolId: z.string().min(1, 'Selecione uma instituição vinculada'),
     adminUserId: z.string().optional(),
     name: z.string().min(2, 'O nome da loja deve ter pelo menos 2 caracteres'),
     category: z.string().min(1, 'Categoria é obrigatória'),
