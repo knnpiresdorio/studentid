@@ -49,43 +49,71 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
         }
     }, []);
 
-    const handleLoginSubmit = (e: React.FormEvent) => {
+    const handleLoginSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
-        if (users.length === 0) {
-            setError('Sistema em manutenção (sem usuários).');
+        let emailToSignIn = username;
+
+        // Check if the input is a CPF (basic check for numbers and length or format)
+        const isCPF = /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/.test(username);
+
+        if (isCPF) {
+            // Remove formatting to search
+            const cleanCPF = username.replace(/\D/g, '');
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('cpf', cleanCPF)
+                .single();
+
+            if (profileError || !profile) {
+                setError('CPF não encontrado ou sem e-mail vinculado.');
+                return;
+            }
+
+            // In Supabase Auth, we need the email. 
+            // Since we only have the ID from profiles, we might need a way to get the email.
+            // However, usually the admin creates the user with an email.
+            // If we don't store email in profiles, we might need to adjust or assume username IS email if not CPF.
+            // Let's check if we can get the email from the profile if we add it there, 
+            // or if we should use a helper function.
+            // For now, let's assume the user MUST provide email or we need to fetch it.
+
+            // RE-CHECK: If the user provided a CPF, we need the email to sign in via Supabase Auth.
+            // Let's assume the 'profiles' table should have the email too, OR we use a RPC.
+            // Since I can't modify the schema right now easily without confirmation, 
+            // I'll check if the 'profiles' has email. (Based on previous list_tables, it didn't show email in 'profiles')
+
+            // Wait, the screenshot shows 'ceasar.solucoes@gmail.com' being typed.
+            // If it's an email, we use it directly.
+            // If CPF, we need to find the email. 
+
+            setError('Para entrar com CPF, entre em contato com o suporte para vincular seu e-mail.');
             return;
         }
 
-        const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+            email: emailToSignIn,
+            password: password,
+        });
 
-        if (user) {
-            if (password.length > 0 && (password === user.password || user.password === undefined)) {
-                // Check if password update is required
-                // 1. Explicit flag
-                // 2. Student using CPF (username) as password (provisional)
-                const isStudentUsingDefaultPass = user.role === 'STUDENT' && password === user.username;
-
-                if (user.mustChangePassword || isStudentUsingDefaultPass) {
-                    setAuthorizedUser(user);
-                    setView('CHANGE_PASSWORD');
-                    setError('');
-                    return;
-                }
-
-                if (rememberMe) {
-                    localStorage.setItem('unipass_last_user', username);
-                } else {
-                    localStorage.removeItem('unipass_last_user');
-                }
-
-                if (onLogin) onLogin(user);
+        if (signInError) {
+            if (signInError.message === 'Invalid login credentials') {
+                setError('E-mail ou senha incorretos.');
             } else {
-                setError('Senha incorreta.');
+                setError(signInError.message);
             }
-        } else {
-            setError('Usuário não encontrado.');
+            return;
+        }
+
+        if (data.user) {
+            if (rememberMe) {
+                localStorage.setItem('unipass_last_user', username);
+            } else {
+                localStorage.removeItem('unipass_last_user');
+            }
+            // onLogin will be handled by AuthContext's onAuthStateChange
         }
     };
 

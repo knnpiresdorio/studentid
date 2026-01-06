@@ -22,7 +22,15 @@ const queryClient = new QueryClient();
 
 
 const AppRoutes = () => {
-  const { user, users, setUsers, login } = useAuth();
+  const { user, loading, login } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="contents">
@@ -30,11 +38,7 @@ const AppRoutes = () => {
         <Routes>
           <Route path="/login" element={
             <LoginScreen
-              users={users}
               onLogin={login}
-              onPasswordUpdate={(userId, newPass) => {
-                setUsers(prev => prev.map(u => u.id === userId ? { ...u, password: newPass, mustChangePassword: false } : u));
-              }}
             />
           } />
           <Route path="*" element={<Navigate to="/login" replace />} />
