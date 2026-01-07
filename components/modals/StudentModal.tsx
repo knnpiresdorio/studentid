@@ -62,6 +62,7 @@ export const StudentModal: React.FC<StudentModalProps> = ({
         resolver: zodResolver(studentSchema),
         defaultValues: {
             isActive: true,
+            email: '',
             dependents: [],
             ...initialData
         }
@@ -84,6 +85,7 @@ export const StudentModal: React.FC<StudentModalProps> = ({
                 reset({
                     userType: MemberType.STUDENT,
                     isActive: true,
+                    email: '',
                     dependents: [],
                     ...initialData
                 });
@@ -243,6 +245,19 @@ export const StudentModal: React.FC<StudentModalProps> = ({
                                         {...register('fullName')}
                                     />
                                     {errors.fullName && <span className="text-red-400 text-xs mt-1 block">{errors.fullName.message}</span>}
+                                </div>
+
+                                <div className={showDependentsTab ? "" : "col-span-2"}>
+                                    <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">
+                                        E-mail <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="email"
+                                        className={`w-full bg-slate-950/50 border ${errors.email ? 'border-red-500' : 'border-white/10'} rounded-xl p-3.5 text-white font-bold focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder-slate-600 focus:bg-slate-900`}
+                                        placeholder="aluno@email.com"
+                                        {...register('email')}
+                                    />
+                                    {errors.email && <span className="text-red-400 text-xs mt-1 block">{errors.email.message}</span>}
                                 </div>
 
                                 <div>

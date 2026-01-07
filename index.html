@@ -3,6 +3,8 @@
 
   <head>
     <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' https://*.supabase.co https://api.qrserver.com data: blob:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://esm.sh https://*.ingest.sentry.io; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>UniPass - Carteira Digital</title>
     <meta name="theme-color" content="#2563eb" />
@@ -53,7 +55,7 @@
         --bg-color-light: #f3f4f6;
         --bg-color-dark: #0B0D12;
       }
-      
+
       body {
         font-family: 'Inter', sans-serif;
         background-color: var(--bg-color-light);
@@ -66,30 +68,34 @@
         background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
         background-size: 24px 24px;
       }
-      
+
       .glass-panel {
         background: rgba(255, 255, 255, 0.7);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         border: 1px solid rgba(255, 255, 255, 0.3);
       }
-      
+
       .dark .glass-panel {
-        background: rgba(28, 31, 38, 0.7); /* scrimba.navy-light with opacity */
+        background: rgba(28, 31, 38, 0.7);
+        /* scrimba.navy-light with opacity */
         border: 1px solid rgba(255, 255, 255, 0.08);
       }
-      
+
       .glass-card {
         background: rgba(255, 255, 255, 0.9);
         backdrop-filter: blur(8px);
         border: 1px solid rgba(255, 255, 255, 0.2);
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        border-radius: 0.75rem; /* rounded-xl by default */
+        border-radius: 0.75rem;
+        /* rounded-xl by default */
       }
 
       .dark .glass-card {
-        background: rgba(28, 31, 38, 0.6); /* scrimba.navy-light with opacity */
-        border: 1px solid rgba(34, 211, 238, 0.1); /* Subtle teal border hint */
+        background: rgba(28, 31, 38, 0.6);
+        /* scrimba.navy-light with opacity */
+        border: 1px solid rgba(34, 211, 238, 0.1);
+        /* Subtle teal border hint */
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
       }
 
@@ -100,8 +106,10 @@
 
       /* Hide scrollbar for IE, Edge and Firefox */
       * {
-        -ms-overflow-style: none;  /* IE and Edge */
-        scrollbar-width: none;  /* Firefox */
+        -ms-overflow-style: none;
+        /* IE and Edge */
+        scrollbar-width: none;
+        /* Firefox */
       }
 
       .perspective-1000 {

@@ -48,6 +48,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { PartnerDetailCard } from './partner/PartnerDetailCard';
 import { NotificationManager } from './notifications/NotificationManager';
+import { supabase } from '../services/supabase';
 import { DeleteConfirmationModal } from '../components/modals/DeleteConfirmationModal';
 import { StudentModal } from '../components/modals/StudentModal';
 import { PartnerModal } from '../components/modals/PartnerModal';
@@ -63,13 +64,16 @@ import {
     usePaginatedStudentsQuery,
     usePaginatedAuditLogsQuery,
     useStudentStatsQuery,
-    fetchStudentById
+    fetchStudentById,
+    useBulkDeleteStudentsMutation,
 } from '../hooks/useSupabaseQuery';
+import { Pagination } from '../components/ui/Pagination';
 import { HeaderControls } from '../components/HeaderControls';
 import { Badge } from '../components/ui/Badge';
 import { maskCPF } from '../utils/masking';
 import { SchoolList } from './admin/schools/SchoolList';
 import { SchoolForm } from './admin/schools/SchoolForm';
+import { SchoolAdminAccess } from './admin/schools/SchoolAdminAccess';
 import { MemberRegistry } from './admin/members/MemberRegistry';
 import { PartnerDirectory } from './admin/partners/PartnerDirectory';
 import { GlobalAuditTrail } from './admin/audit/GlobalAuditTrail';
@@ -102,6 +106,8 @@ export const AdminDashboard = ({
     const deleteStudent = useDeleteStudentMutation();
     const deletePartner = useDeletePartnerMutation();
     const upsertSchool = useUpsertSchoolMutation();
+    const bulkDeleteStudents = useBulkDeleteStudentsMutation();
+    const bulkUpsertStudents = useBulkUpsertStudentsMutation();
 
     const [activeSection, setActiveSection] = useState<'overview' | 'schools' | 'partners' | 'students' | 'logs' | 'notifications'>('overview');
     const [searchTerm, setSearchTerm] = useState('');
@@ -110,7 +116,7 @@ export const AdminDashboard = ({
     // Efficient Stats Fetching
     const { data: studentStats } = useStudentStatsQuery();
 
-    const pageSize = 10;
+    const [pageSize, setPageSize] = useState(10);
 
     // --- Pagination State ---
     const [globalStudentPage, setGlobalStudentPage] = useState(1);
@@ -240,7 +246,7 @@ export const AdminDashboard = ({
 
 
 
-    const handleBulkAction = (action: 'activate' | 'deactivate') => {
+    const handleBulkAction = (action: 'activate' | 'deactivate' | 'delete') => {
         setPendingBulkAction(action);
     };
 
@@ -248,27 +254,35 @@ export const AdminDashboard = ({
         if (!pendingBulkAction) return;
 
         const isActivating = pendingBulkAction === 'activate';
+        const isDeactivating = pendingBulkAction === 'deactivate';
+        const isDeleting = pendingBulkAction === 'delete';
 
         try {
-            // Processing in parallel for better speed, though sequential is safer for some backends
-            // Given our optimistic updates, parallel should be fine
-            await Promise.all(
-                selectedStudents.map(async (id) => {
-                    // Optimized: try to find in current view data first, else fetch
-                    const fromView = managedStudentsData?.data.find(s => s.id === id) || globalStudentsData?.data.find(s => s.id === id);
-                    const student = fromView || await fetchStudentById(id);
+            if (isDeleting) {
+                await bulkDeleteStudents.mutateAsync(selectedStudents);
+            } else {
+                // For activate/deactivate, we need the full student objects
+                // If we have hundreds, we should fetch them efficiently or use a direct update RPC
+                // For now, let's fetch matching profiles and update them
+                const { data: studentsToUpdate, error } = await supabase
+                    .from('students')
+                    .select('*')
+                    .in('id', selectedStudents);
 
-                    if (student) {
-                        return upsertStudent.mutateAsync({ ...student, isActive: isActivating });
-                    }
-                    return Promise.resolve();
-                })
-            );
+                if (error) throw error;
+
+                const updatedStudents = studentsToUpdate.map(s => ({
+                    ...s,
+                    isActive: isActivating
+                }));
+
+                await bulkUpsertStudents.mutateAsync(updatedStudents);
+            }
 
             addAuditLog(
                 managedSchool?.id || null,
                 ActionType.MODIFICATION,
-                `${isActivating ? 'Ativou' : 'Desativou'} ${selectedStudents.length} membros em massa`,
+                `${isActivating ? 'Ativou' : isDeleting ? 'Removeu' : 'Desativou'} ${selectedStudents.length} membros em massa`,
                 user?.id || 'sys',
                 user?.name || 'Admin',
                 user?.role || UserRole.ADMIN
@@ -322,8 +336,6 @@ export const AdminDashboard = ({
             alert("Erro ao salvar membro.");
         }
     };
-
-    const bulkUpsertStudents = useBulkUpsertStudentsMutation();
 
     const handleImportStudents = async (students: Student[]) => {
         setImportError(null);
@@ -722,6 +734,7 @@ export const AdminDashboard = ({
                             studentStats={studentStats || []}
                             partners={partners}
                             onManageSchool={setManagedSchool}
+                            onEditSchool={(school) => { setEditingSchool(school); setIsSchoolModalOpen(true); }}
                         />
                     )}
 
@@ -736,6 +749,7 @@ export const AdminDashboard = ({
                         <div className="animate-fade-in space-y-6">
                             <div className="flex gap-4 border-b border-white/10">
                                 <button onClick={() => setManageTab('info')} className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${manageTab === 'info' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>Informações</button>
+                                <button onClick={() => setManageTab('access')} className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${manageTab === 'access' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>Acesso Admin</button>
                                 <button onClick={() => setManageTab('students')} className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${manageTab === 'students' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>Membros ({(studentStats || []).filter(s => s.schoolId === managedSchool.id).length})</button>
                                 <button onClick={() => setManageTab('partners')} className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${manageTab === 'partners' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>Parceiros ({partners.filter(p => p.schoolId === managedSchool.id).length})</button>
                             </div >
@@ -745,6 +759,18 @@ export const AdminDashboard = ({
                                     school={managedSchool}
                                     onUpdate={(updates) => setManagedSchool({ ...managedSchool, ...updates })}
                                     onSave={handleSaveSchoolInfo}
+                                />
+                            )}
+
+                            {manageTab === 'access' && (
+                                <SchoolAdminAccess
+                                    school={managedSchool}
+                                    addAuditLog={addAuditLog}
+                                    currentAdmin={{
+                                        id: user?.id || 'sys',
+                                        name: user?.name || 'Admin',
+                                        role: user?.role || UserRole.ADMIN
+                                    }}
                                 />
                             )}
 
@@ -765,24 +791,50 @@ export const AdminDashboard = ({
                                             </div>
                                             <div className="flex items-center gap-3 w-full md:w-auto justify-end">
                                                 {selectedStudents.length > 0 && (
-                                                    <div className="flex items-center gap-2 animate-fade-in bg-slate-800/50 p-1 rounded-lg border border-white/5">
-                                                        <span className="text-xs text-blue-300 font-bold px-2">
-                                                            {selectedStudents.length} selected
-                                                        </span>
-                                                        <button
-                                                            onClick={() => handleBulkAction('activate')}
-                                                            className="bg-green-500/20 text-green-400 p-1.5 rounded-md hover:bg-green-500/30 transition-colors"
-                                                            title="Ativar Selecionados"
-                                                        >
-                                                            <CheckCircle2 size={16} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleBulkAction('deactivate')}
-                                                            className="bg-red-500/20 text-red-400 p-1.5 rounded-md hover:bg-red-500/30 transition-colors"
-                                                            title="Desativar Selecionados"
-                                                        >
-                                                            <Circle size={16} />
-                                                        </button>
+                                                    <div className="flex items-center gap-2 animate-fade-in bg-slate-800/50 p-1.5 rounded-xl border border-white/10 shadow-2xl ring-1 ring-blue-500/20">
+                                                        <div className="flex flex-col px-2">
+                                                            <span className="text-[10px] text-blue-300 font-bold uppercase tracking-widest leading-none">
+                                                                {selectedStudents.length} selecionados
+                                                            </span>
+                                                            {selectedStudents.length === (managedStudentsData?.data || []).length && (managedStudentsData?.count || 0) > selectedStudents.length && (
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        const { data, error } = await supabase
+                                                                            .from('students')
+                                                                            .select('id')
+                                                                            .eq('schoolId', managedSchool?.id); // Basic filter, should match the current list
+                                                                        if (data) setSelectedStudents(data.map(s => s.id));
+                                                                    }}
+                                                                    className="text-[9px] text-white hover:text-blue-400 font-bold underline transition-colors"
+                                                                >
+                                                                    Selecionar todos os {managedStudentsData?.count}
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        <div className="h-6 w-px bg-white/10 mx-1"></div>
+                                                        <div className="flex gap-1.5">
+                                                            <button
+                                                                onClick={() => handleBulkAction('activate')}
+                                                                className="bg-green-500/10 text-green-400 p-2 rounded-lg hover:bg-green-500/20 border border-green-500/20 transition-all hover:scale-110"
+                                                                title="Ativar Selecionados"
+                                                            >
+                                                                <CheckCircle2 size={16} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleBulkAction('deactivate')}
+                                                                className="bg-orange-500/10 text-orange-400 p-2 rounded-lg hover:bg-orange-500/20 border border-orange-500/20 transition-all hover:scale-110"
+                                                                title="Desativar Selecionados"
+                                                            >
+                                                                <Circle size={16} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleBulkAction('delete')}
+                                                                className="bg-red-500/10 text-red-400 p-2 rounded-lg hover:bg-red-500/20 border border-red-500/20 transition-all hover:scale-110"
+                                                                title="Remover Selecionados"
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 )}
                                                 <Button
@@ -912,26 +964,31 @@ export const AdminDashboard = ({
                                         </div>
 
                                         {/* Pagination Controls */}
-                                        <div className="p-4 border-t border-white/5 flex items-center justify-between bg-slate-950/20">
-                                            <span className="text-xs text-slate-500 font-medium tracking-wide">
-                                                Mostrando {Math.min((managedStudentsData?.data || []).length, pageSize)} de {managedStudentsData?.count || 0} membros
-                                            </span>
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => setManagedStudentPage(prev => Math.max(1, prev - 1))}
-                                                    disabled={managedStudentPage === 1 || isLoadingManagedStudents}
-                                                    className="px-3 py-1.5 rounded-lg border border-white/10 text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-50 transition-all"
-                                                >
-                                                    Anterior
-                                                </button>
-                                                <button
-                                                    onClick={() => setManagedStudentPage(prev => prev + 1)}
-                                                    disabled={managedStudentPage >= Math.ceil((managedStudentsData?.count || 0) / pageSize) || isLoadingManagedStudents}
-                                                    className="px-3 py-1.5 rounded-lg border border-white/10 text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-50 transition-all"
-                                                >
-                                                    Próximo
-                                                </button>
+                                        <div className="p-4 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between bg-slate-950/20 gap-4">
+                                            <div className="flex items-center gap-4">
+                                                <span className="text-xs text-slate-500 font-medium tracking-wide">
+                                                    Mostrando {Math.min((managedStudentsData?.data || []).length, pageSize)} de {managedStudentsData?.count || 0} membros
+                                                </span>
+                                                <div className="flex items-center gap-2 border-l border-white/5 pl-4">
+                                                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Ver:</span>
+                                                    {[10, 25, 50, 100].map(size => (
+                                                        <button
+                                                            key={size}
+                                                            onClick={() => { setPageSize(size); setManagedStudentPage(1); }}
+                                                            className={`text-[10px] font-bold px-2 py-1 rounded transition-all ${pageSize === size ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
+                                                        >
+                                                            {size}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
+
+                                            <Pagination
+                                                currentPage={managedStudentPage}
+                                                totalPages={Math.ceil((managedStudentsData?.count || 0) / pageSize)}
+                                                onPageChange={setManagedStudentPage}
+                                                isLoading={isLoadingManagedStudents}
+                                            />
                                         </div>
                                     </div>
                                 )

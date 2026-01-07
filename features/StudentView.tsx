@@ -63,7 +63,8 @@ export const StudentView: React.FC<StudentViewProps> = ({
         handleProfilePhotoUpdate,
         confirmPhotoUpdate,
         handleInfoUpdateRequest,
-        isUploading
+        isUploading,
+        resolvedPhotoUrl
     } = useStudentProfile({ user, onRequestChange });
 
     // 2. Dependents Management
@@ -97,9 +98,10 @@ export const StudentView: React.FC<StudentViewProps> = ({
 
     const isDependentUser = user.studentData?.isDependent;
     const hasPhoto = !!user.studentData?.photoUrl;
+    const hasPendingPhoto = myRequests.some(r => r.type === 'UPDATE_PHOTO' && r.status === 'PENDING');
 
     // --- Render Mandatory Photo Upload (Force Onboarding) ---
-    if (!hasPhoto && user.role === UserRole.STUDENT && activeTab === 'id') {
+    if (!hasPhoto && !hasPendingPhoto && user.role === UserRole.STUDENT && activeTab === 'id') {
         return (
             <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-8 animate-fade-in">
                 <div className="max-w-md w-full text-center space-y-8">
@@ -237,7 +239,10 @@ export const StudentView: React.FC<StudentViewProps> = ({
                 <>
                     {activeTab === 'id' && user.studentData && (
                         <DigitalID
-                            studentData={user.studentData}
+                            studentData={{
+                                ...user.studentData,
+                                photoUrl: resolvedPhotoUrl || (myRequests.find(r => r.type === 'UPDATE_PHOTO' && r.status === 'PENDING')?.payload?.photoUrl) || ''
+                            }}
                             isOffline={isOffline}
                             onReportError={() => setInfoModal({ isOpen: true, reason: '' })}
                             onUpdatePhoto={() => setShowPhotoUploadConfirmation(true)}

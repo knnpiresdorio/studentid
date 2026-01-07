@@ -31,6 +31,7 @@ export const DependentModal: React.FC<DependentModalProps> = ({
         resolver: zodResolver(dependentSchema),
         defaultValues: {
             isActive: true,
+            email: '',
             city: '',
             state: ''
         }
@@ -48,6 +49,7 @@ export const DependentModal: React.FC<DependentModalProps> = ({
                 relation: '',
                 cpf: '',
                 birthDate: '',
+                email: '',
                 photoUrl: ''
             });
         }
@@ -128,7 +130,7 @@ export const DependentModal: React.FC<DependentModalProps> = ({
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="md:col-span-2">
-                            <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wide">Nome Completo</label>
+                            <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wide">Nome Completo <span className="text-red-500">*</span></label>
                             <input
                                 className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 text-white font-medium focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder-slate-600"
                                 placeholder="Nome como no documento"
@@ -137,8 +139,19 @@ export const DependentModal: React.FC<DependentModalProps> = ({
                             {errors.name && <span className="text-red-400 text-xs mt-1">{errors.name.message}</span>}
                         </div>
 
+                        <div className="md:col-span-2">
+                            <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wide">E-mail <span className="text-red-500">*</span></label>
+                            <input
+                                type="email"
+                                className={`w-full bg-slate-950/50 border ${errors.email ? 'border-red-500' : 'border-white/10'} rounded-xl p-3 text-white font-medium focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder-slate-600`}
+                                placeholder="dependente@email.com"
+                                {...register('email')}
+                            />
+                            {errors.email && <span className="text-red-400 text-xs mt-1">{errors.email.message}</span>}
+                        </div>
+
                         <div>
-                            <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wide">Parentesco</label>
+                            <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wide">Parentesco <span className="text-red-500">*</span></label>
                             <div className="relative">
                                 <select
                                     className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 text-white font-medium focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all appearance-none cursor-pointer"
@@ -156,7 +169,7 @@ export const DependentModal: React.FC<DependentModalProps> = ({
                         </div>
 
                         <div>
-                            <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wide">Data de Nascimento</label>
+                            <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wide">Data de Nascimento <span className="text-red-500">*</span></label>
                             <input
                                 type="date"
                                 className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 text-white font-medium focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all"
@@ -166,7 +179,7 @@ export const DependentModal: React.FC<DependentModalProps> = ({
                         </div>
 
                         <div>
-                            <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wide">CPF (Opcional)</label>
+                            <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wide">CPF <span className="text-red-500">*</span></label>
                             <Controller
                                 control={control}
                                 name="cpf"
@@ -183,7 +196,7 @@ export const DependentModal: React.FC<DependentModalProps> = ({
                         </div>
 
                         <div className="md:col-span-1">
-                            <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wide">Cidade</label>
+                            <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wide">Cidade <span className="text-red-500">*</span></label>
                             <input
                                 className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 text-white font-medium focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder-slate-600"
                                 placeholder="Cidade"
@@ -192,7 +205,7 @@ export const DependentModal: React.FC<DependentModalProps> = ({
                         </div>
 
                         <div>
-                            <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wide">Estado</label>
+                            <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wide">Estado <span className="text-red-500">*</span></label>
                             <div className="relative">
                                 <select
                                     className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 text-white font-medium focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all appearance-none cursor-pointer"

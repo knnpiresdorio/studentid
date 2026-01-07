@@ -168,7 +168,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
     const [firstAccessEmail, setFirstAccessEmail] = useState('');
     const [firstAccessPassword, setFirstAccessPassword] = useState('');
     const [firstAccessConfirm, setFirstAccessConfirm] = useState('');
-    const [studentIdentity, setStudentIdentity] = useState<{ found: boolean, name: string, school: string } | null>(null);
+    const [studentIdentity, setStudentIdentity] = useState<{ found: boolean, activated: boolean, masked_email: string } | null>(null);
 
     const handleCheckCpf = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -178,11 +178,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
         try {
             const { data, error } = await supabase.rpc('check_student_identity', {
                 check_cpf: firstAccessCpf
-            });
+            }).single() as any;
 
             if (error) throw error;
 
             if (data && data.found) {
+                if (data.activated) {
+                    setError('Este cadastro já foi ativado. Por favor, faça login com seu e-mail e senha.');
+                    return;
+                }
+
+                if (data.masked_email === 'contate-sua-escola') {
+                    setError('Seu cadastro foi localizado, mas não possui um e-mail vinculado. Por favor, contate sua instituição.');
+                    return;
+                }
+
                 setStudentIdentity(data);
                 setFirstAccessStage('CONFIRM_IDENTITY');
             } else {
@@ -225,8 +235,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
                 password: firstAccessPassword,
                 options: {
                     data: {
-                        cpf: firstAccessCpf,
-                        full_name: studentIdentity?.full_name // Optional, trigger uses DB name anyway
+                        cpf: firstAccessCpf
                     }
                 }
             });
@@ -346,7 +355,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
                                 <div className="space-y-4">
                                     <div>
                                         <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                                            E-MAIL OU CPF
+                                            EMAIL
                                         </label>
                                         <div className="relative">
                                             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -356,7 +365,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
                                                 type="text"
                                                 required
                                                 className="block w-full pl-11 pr-4 py-3.5 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none font-medium"
-                                                placeholder="ex: 123.456.789-00"
+                                                placeholder="seu@email.com"
                                                 value={username}
                                                 onChange={(e) => setUsername(e.target.value)}
                                             />
@@ -365,7 +374,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
 
                                     <div>
                                         <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                                            PALAVRA-PASSE
+                                            SENHA
                                         </label>
                                         <div className="relative">
                                             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -413,7 +422,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
                                         onClick={() => toggleView('FORGOT_PASSWORD')}
                                         className="text-sm font-bold text-indigo-600 hover:text-indigo-700 tracking-wide uppercase"
                                     >
-                                        Esqueci-me
+                                        RECUPERAR SENHA
                                     </button>
                                 </div>
 
@@ -433,16 +442,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
                                         disabled={isProcessing}
                                         className="w-full bg-[#5664F5] hover:bg-[#4351e0] disabled:bg-[#a5acf8] text-white font-bold py-4 px-4 rounded-xl transition-all shadow-lg shadow-indigo-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 group"
                                     >
-                                        {isProcessing ? 'ENTRANDO...' : 'ENTRAR NO UNIPASS'}
+                                        {isProcessing ? 'ENTRANDO...' : 'ENTRAR'}
                                         {!isProcessing && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
                                     </button>
 
                                     <button
                                         type="button"
                                         onClick={() => toggleView('FIRST_ACCESS')}
-                                        className="w-full bg-white border-2 border-indigo-100 hover:border-indigo-200 text-indigo-600 font-bold py-4 px-4 rounded-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                                        className="w-full bg-white border-2 border-indigo-100 hover:border-indigo-200 text-indigo-600 font-bold py-4 px-4 rounded-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 uppercase"
                                     >
-                                        PRIMEIRO ACESSO? CRIAR CONTA
+                                        PRIMEIRO ACESSO
                                     </button>
                                 </div>
                             </form>
@@ -513,14 +522,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
                             {firstAccessStage === 'CONFIRM_IDENTITY' && studentIdentity && (
                                 <div className="space-y-6 animate-fade-in">
                                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 text-center">
-                                        <div className="w-16 h-16 bg-slate-200 rounded-full mx-auto mb-3 flex items-center justify-center">
-                                            <UserIcon size={32} className="text-slate-400" />
+                                        <div className="w-16 h-16 bg-emerald-100 rounded-full mx-auto mb-4 flex items-center justify-center text-emerald-600">
+                                            <ShieldCheck size={32} />
                                         </div>
-                                        <h3 className="font-bold text-lg text-slate-800 mb-1">{studentIdentity.name}</h3>
-                                        <p className="text-indigo-600 font-medium text-sm mb-4">{studentIdentity.school}</p>
-                                        <div className="text-xs text-slate-400 bg-white p-2 rounded border border-slate-100 inline-block">
-                                            Este é você?
+                                        <h3 className="font-bold text-lg text-slate-800 mb-1">Cadastro Localizado!</h3>
+                                        <p className="text-slate-500 text-sm mb-4">
+                                            Encontramos seus dados em nossa base. Para sua segurança, confirme o registro usando o e-mail:
+                                        </p>
+                                        <div className="bg-white px-4 py-2 rounded-lg border border-slate-100 inline-block font-mono text-indigo-600 font-bold mb-4">
+                                            {studentIdentity.masked_email}
                                         </div>
+                                        <p className="text-xs text-slate-400 italic">
+                                            Este é o e-mail que você deve utilizar na próxima etapa.
+                                        </p>
                                     </div>
 
                                     <div className="flex gap-3">
@@ -668,7 +682,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
                                 <form onSubmit={handleForgotSubmit} className="space-y-6">
                                     <div>
                                         <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                                            E-MAIL OU CPF
+                                            EMAIL
                                         </label>
                                         <div className="relative">
                                             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -678,7 +692,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
                                                 type="text"
                                                 required
                                                 className="block w-full pl-11 pr-4 py-3.5 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none font-medium"
-                                                placeholder="ex: 123.456.789-00"
+                                                placeholder="seu@email.com"
                                                 value={forgotEmail}
                                                 onChange={(e) => setForgotEmail(e.target.value)}
                                             />

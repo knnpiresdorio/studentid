@@ -33,6 +33,7 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
         resolver: zodResolver(schoolSchema),
         defaultValues: {
             isActive: true,
+            email: '',
             description: ''
         }
     });
@@ -45,6 +46,7 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
                 isActive: true,
                 description: '',
                 name: '',
+                email: '',
                 logoUrl: '',
                 type: SchoolType.UNIVERSITY
             });
@@ -155,6 +157,17 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
                                     {...register('name')}
                                 />
                                 {errors.name && <span className="text-red-400 text-xs mt-1 block font-medium">{errors.name.message}</span>}
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">E-mail de Contato <span className="text-red-500">*</span></label>
+                                <input
+                                    type="email"
+                                    className={`w-full bg-slate-950/50 border ${errors.email ? 'border-red-500' : 'border-white/10'} rounded-xl p-3.5 text-white font-bold focus:ring-2 focus:ring-blue-500/50 outline-none transition-all placeholder-slate-600`}
+                                    placeholder="Ex: contato@escola.com"
+                                    {...register('email')}
+                                />
+                                {errors.email && <span className="text-red-400 text-xs mt-1 block font-medium">{errors.email.message}</span>}
                             </div>
 
                             <div>

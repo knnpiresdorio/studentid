@@ -187,6 +187,17 @@ export const PartnerModal: React.FC<PartnerModalProps> = ({
                         {errors.name && <span className="text-red-400 text-xs mt-1">{errors.name.message}</span>}
                     </div>
 
+                    <div>
+                        <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wide">E-mail Comercial <span className="text-red-500">*</span></label>
+                        <input
+                            type="email"
+                            className={`w-full bg-slate-950/50 border ${errors.email ? 'border-red-500' : 'border-white/10'} rounded-xl p-3 text-white font-bold focus:ring-2 focus:ring-purple-500/50 outline-none transition-all placeholder-slate-600`}
+                            placeholder="parceiro@email.com"
+                            {...register('email')}
+                        />
+                        {errors.email && <span className="text-red-400 text-xs mt-1">{errors.email.message}</span>}
+                    </div>
+
                     {withUserCreation && !partner && (
                         <div className="bg-slate-950/30 p-4 rounded-xl border border-white/5 space-y-4">
                             <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-white/10 pb-2">Credenciais de Acesso (Gestor)</h3>

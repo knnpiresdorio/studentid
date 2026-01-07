@@ -49,13 +49,35 @@ export const useStudentImport = (school: School | null) => {
         const idxUserType = getColumnIndex(['usertype', 'tipo', 'perfil']);
         const idxCity = getColumnIndex(['city', 'cidade']);
         const idxState = getColumnIndex(['state', 'estado', 'uf']);
+        const idxEmail = getColumnIndex(['email', 'e-mail', 'contato']);
 
-        if (idxFullName === -1 || idxCpf === -1 || idxRegistration === -1) {
-            newErrors.push('Cabeçalhos obrigatórios não encontrados. Certifique-se de que o CSV possui colunas para Nome, CPF e Matrícula.');
+        if (idxFullName === -1 || idxCpf === -1 || idxRegistration === -1 || idxEmail === -1) {
+            newErrors.push('Cabeçalhos obrigatórios não encontrados. Certifique-se de que o CSV possui colunas para Nome, CPF, Matrícula e Email.');
             setErrors(newErrors);
             setIsParsing(false);
             return;
         }
+
+        const formatDateForDB = (dateStr: string) => {
+            if (!dateStr || !dateStr.trim()) return '';
+
+            // Expected format: DD/MM/YYYY
+            const parts = dateStr.trim().split('/');
+            if (parts.length === 3) {
+                const day = parts[0].padStart(2, '0');
+                const month = parts[1].padStart(2, '0');
+                const year = parts[2];
+                return `${year}-${month}-${day}`;
+            }
+
+            // Fallback: try native Date parsing if it looks like ISO already
+            const date = new Date(dateStr);
+            if (!isNaN(date.getTime())) {
+                return date.toISOString().split('T')[0];
+            }
+
+            return '';
+        };
 
         const processedCpfs = new Set<string>();
 
@@ -70,9 +92,10 @@ export const useStudentImport = (school: School | null) => {
             const fullName = values[idxFullName];
             let cpf = values[idxCpf]?.replace(/\D/g, '');
             const registrationNumber = values[idxRegistration];
+            const email = values[idxEmail];
 
-            if (!fullName || !cpf || !registrationNumber) {
-                newErrors.push(`Linha ${i + 1}: Dados obrigatórios ausentes.`);
+            if (!fullName || !cpf || !registrationNumber || !email) {
+                newErrors.push(`Linha ${i + 1}: Dados obrigatórios ausentes. (Nome, CPF, Matrícula e Email são necessários)`);
                 continue;
             }
 
@@ -93,9 +116,10 @@ export const useStudentImport = (school: School | null) => {
                 fullName,
                 cpf,
                 registrationNumber,
+                email,
                 course: idxCourse !== -1 ? values[idxCourse] : '',
-                validUntil: idxValidUntil !== -1 ? values[idxValidUntil] : '',
-                birthDate: idxBirthDate !== -1 ? values[idxBirthDate] : '',
+                validUntil: idxValidUntil !== -1 ? formatDateForDB(values[idxValidUntil]) : '',
+                birthDate: idxBirthDate !== -1 ? formatDateForDB(values[idxBirthDate]) : '',
                 userType: (idxUserType !== -1 ? (values[idxUserType] as MemberType) : MemberType.STUDENT),
                 city: idxCity !== -1 ? values[idxCity] : '',
                 state: idxState !== -1 ? values[idxState] : '',

@@ -27,9 +27,23 @@ export const fetchStudentStats = async (): Promise<{ schoolId: string; isActive:
 };
 
 const fetchChangeRequests = async (): Promise<ChangeRequest[]> => {
-    const { data, error } = await supabase.from('change_requests').select('*');
+    const { data, error } = await supabase.from('change_requests').select('*').order('created_at', { ascending: false });
     if (error) throw error;
-    return data || [];
+
+    // Map snake_case to camelCase
+    return (data || []).map(req => ({
+        id: req.id,
+        schoolId: req.school_id,
+        studentId: req.student_id,
+        studentName: req.student_name,
+        type: req.type,
+        status: req.status,
+        reason: req.reason,
+        payload: req.payload,
+        createdAt: req.created_at,
+        resolvedAt: req.resolved_at,
+        resolvedBy: req.resolved_by
+    })) as ChangeRequest[];
 };
 
 export const fetchPaginatedStudents = async ({ page, pageSize, searchTerm, schoolId }: PaginationParams): Promise<PaginatedResult<Student>> => {
@@ -127,11 +141,42 @@ export const useDeleteStudentMutation = () => {
     });
 };
 
+export const useBulkDeleteStudentsMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (ids: string[]) => {
+            const { error } = await supabase.from('students').delete().in('id', ids);
+            if (error) throw error;
+            return ids;
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: [STUDENT_KEYS.paginated] });
+            queryClient.invalidateQueries({ queryKey: ['studentStats'] });
+        },
+    });
+};
+
 export const useUpsertChangeRequestMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: async (request: ChangeRequest) => {
-            const { data, error } = await supabase.from('change_requests').upsert(request).select().single();
+            // Map camelCase to snake_case
+            const payload: any = {
+                school_id: request.schoolId,
+                student_id: request.studentId,
+                student_name: request.studentName,
+                type: request.type,
+                status: request.status || 'PENDING',
+                reason: request.reason,
+                payload: request.payload,
+            };
+
+            // Only include ID if it's a valid UUID (not 'req_timestamp')
+            if (request.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request.id)) {
+                payload.id = request.id;
+            }
+
+            const { data, error } = await supabase.from('change_requests').upsert(payload).select().single();
             if (error) throw error;
             return data;
         },

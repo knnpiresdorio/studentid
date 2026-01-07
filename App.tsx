@@ -11,6 +11,7 @@ import { AnalyticsProvider } from './context/AnalyticsContext';
 import { StudentRoutes } from './routes/StudentRoutes';
 import { PartnerRoutes } from './routes/PartnerRoutes';
 import { AdminRoutes } from './routes/AdminRoutes';
+import { OnboardingPasswordScreen } from './features/auth/OnboardingPasswordScreen';
 
 // Login
 import { LoginScreen } from './features/LoginScreen';
@@ -41,6 +42,7 @@ const AppRoutes = () => {
               onLogin={login}
             />
           } />
+          <Route path="/onboarding" element={<OnboardingPasswordScreen />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       ) : (
@@ -48,6 +50,7 @@ const AppRoutes = () => {
           <Route path="/student/*" element={<StudentRoutes />} />
           <Route path="/partner/*" element={<PartnerRoutes />} />
           <Route path="/admin/*" element={<AdminRoutes />} />
+          <Route path="/onboarding" element={<OnboardingPasswordScreen />} />
 
           {/* Default Redirects based on Role */}
           <Route path="*" element={<Navigate to={

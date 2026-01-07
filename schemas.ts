@@ -5,11 +5,12 @@ export const dependentSchema = z.object({
     id: z.string().optional(),
     name: z.string().min(2, 'Nome do dependente é obrigatório'),
     relation: z.string().min(1, 'Grau de parentesco é obrigatório'),
-    cpf: z.string().regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, 'CPF deve estar no formato 000.000.000-00').optional().or(z.literal('')),
-    birthDate: z.string().min(1, 'Data de nascimento é obrigatória').optional().or(z.literal('')),
-    photoUrl: z.string().regex(/^(https?:\/\/|data:image\/|blob:)/, 'URL da foto inválida').optional().or(z.literal('')),
-    city: z.string().optional().or(z.literal('')),
-    state: z.string().optional().or(z.literal('')),
+    cpf: z.string().regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, 'CPF deve estar no formato 000.000.000-00'),
+    birthDate: z.string().min(1, 'Data de nascimento é obrigatória'),
+    email: z.string().email('E-mail inválido'),
+    photoUrl: z.string().regex(/^(https?:\/\/|data:image\/|blob:)/, 'URL da foto inválida').optional().or(z.literal('')).or(z.null()),
+    city: z.string().min(1, 'Cidade é obrigatória'),
+    state: z.string().min(1, 'Estado é obrigatório'),
     isActive: z.boolean().optional(),
 });
 
@@ -25,6 +26,7 @@ export const studentSchema = z.object({
     registrationNumber: z.string().min(1, 'Matrícula é obrigatória'),
     validUntil: z.string().min(1, 'Data de validade é obrigatória'),
     birthDate: z.string().min(1, 'Data de nascimento é obrigatória'),
+    email: z.string().email('E-mail inválido'),
     isActive: z.boolean(),
     userType: z.nativeEnum(MemberType).optional(),
     city: z.string().optional(),
@@ -67,6 +69,7 @@ export const partnerSchema = z.object({
         phone: z.boolean().optional(),
     }).optional(),
     isActive: z.boolean(),
+    email: z.string().email('E-mail inválido'),
     activePromotions: z.array(promotionSchema).optional(),
 });
 
@@ -76,6 +79,7 @@ export const schoolSchema = z.object({
     logoUrl: z.string().regex(/^(https?:\/\/|data:image\/|blob:)/, 'URL da logo inválida'),
     type: z.nativeEnum(SchoolType),
     isActive: z.boolean(),
+    email: z.string().email('E-mail inválido'),
     description: z.string().optional().or(z.literal('')),
     createdAt: z.string().optional()
 });

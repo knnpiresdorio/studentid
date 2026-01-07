@@ -9,13 +9,15 @@ interface SchoolListProps {
     studentStats: { schoolId: string }[];
     partners: Partner[];
     onManageSchool: (school: School) => void;
+    onEditSchool: (school: School) => void;
 }
 
 export const SchoolList: React.FC<SchoolListProps> = ({
     schools,
     studentStats,
     partners,
-    onManageSchool
+    onManageSchool,
+    onEditSchool
 }) => {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
@@ -24,7 +26,11 @@ export const SchoolList: React.FC<SchoolListProps> = ({
                     <div className="h-32 bg-gradient-to-br from-blue-900 via-slate-900 to-indigo-900 relative p-6 flex flex-col justify-between overflow-hidden">
                         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
                         <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="p-2 bg-white/10 rounded-full backdrop-blur-xl hover:bg-white/20 cursor-pointer text-white">
+                            <div
+                                onClick={(e) => { e.stopPropagation(); onEditSchool(school); }}
+                                className="p-2.5 bg-white/10 rounded-full backdrop-blur-xl hover:bg-white/20 cursor-pointer text-white transition-all hover:scale-110 active:scale-95 hover:rotate-90 z-20"
+                                title="Editar Dados da Instituição"
+                            >
                                 <Settings size={16} />
                             </div>
                         </div>

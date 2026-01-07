@@ -74,6 +74,14 @@ export const ImportStudentsModal: React.FC<ImportStudentsModalProps> = ({
                                     <div>
                                         <p className="font-bold dark:text-white text-lg">Clique para fazer upload do CSV</p>
                                         <p className="text-slate-500 text-sm mt-1">Ou arraste seu arquivo aqui</p>
+                                        <div className="mt-4 flex flex-wrap justify-center gap-2">
+                                            {['Nome', 'CPF', 'Matrícula', 'Email'].map(h => (
+                                                <span key={h} className="text-[10px] bg-slate-100 dark:bg-white/5 px-2 py-1 rounded text-slate-500 font-bold uppercase">{h}*</span>
+                                            ))}
+                                            {['Curso', 'Nascimento', 'Validade'].map(h => (
+                                                <span key={h} className="text-[10px] bg-slate-100 dark:bg-white/5 px-2 py-1 rounded text-slate-400 font-bold uppercase">{h}</span>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -130,7 +138,7 @@ export const ImportStudentsModal: React.FC<ImportStudentsModalProps> = ({
                                         <div key={i} className="p-4 flex items-center justify-between">
                                             <div>
                                                 <p className="text-sm font-bold dark:text-white">{student.fullName}</p>
-                                                <p className="text-xs text-slate-500">{student.cpf} • {student.course}</p>
+                                                <p className="text-xs text-slate-500">{student.cpf} • {student.email}</p>
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-[10px] font-bold text-indigo-500 uppercase">{student.userType}</p>

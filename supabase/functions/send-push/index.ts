@@ -35,14 +35,14 @@ serve(async (req: Request) => {
         if (authError || !user) throw new Error("Unauthorized");
 
         // Fetch User Role from DB
-        const { data: userRoleData, error: roleError } = await supabaseAdmin
-            .from('user_roles')
+        const { data: profile, error: roleError } = await supabaseAdmin
+            .from('profiles')
             .select('role')
             .eq('id', user.id)
             .single();
 
-        // Default to checking partners table if role table empty (backward compatibility) or assume STUDENT
-        const role = userRoleData?.role;
+        // Default to checking partners table if role empty (backward compatibility) or assume STUDENT
+        const role = profile?.role;
 
         // Validation: Must be PARTNER/STORE_ADMIN or ADMIN/SCHOOL_ADMIN
         const isPartner = role === 'STORE_ADMIN' || role === 'STORE' || role === 'PARTNER'; // Check mapping with types.ts

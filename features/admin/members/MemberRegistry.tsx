@@ -4,6 +4,7 @@ import { Badge } from '../../../components/ui/Badge';
 import { optimizeImage } from '../../../utils/image';
 import { maskCPF } from '../../../utils/masking';
 import { School as SchoolIcon } from 'lucide-react';
+import { Pagination } from '../../../components/ui/Pagination';
 
 interface MemberRegistryProps {
     data: Student[];
@@ -89,22 +90,12 @@ export const MemberRegistry: React.FC<MemberRegistryProps> = ({
                 <span className="text-xs text-slate-500 font-medium tracking-wide">
                     Mostrando {Math.min(data.length, pageSize)} de {count} membros globais
                 </span>
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => onPageChange(Math.max(1, page - 1))}
-                        disabled={page === 1 || isLoading}
-                        className="px-3 py-1.5 rounded-lg border border-white/10 text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-50 transition-all"
-                    >
-                        Anterior
-                    </button>
-                    <button
-                        onClick={() => onPageChange(page + 1)}
-                        disabled={page >= Math.ceil(count / pageSize) || isLoading}
-                        className="px-3 py-1.5 rounded-lg border border-white/10 text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-50 transition-all"
-                    >
-                        Próximo
-                    </button>
-                </div>
+                <Pagination
+                    currentPage={page}
+                    totalPages={Math.ceil(count / pageSize)}
+                    onPageChange={onPageChange}
+                    isLoading={isLoading}
+                />
             </div>
         </div>
     );

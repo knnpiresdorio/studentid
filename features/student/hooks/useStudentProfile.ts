@@ -2,6 +2,8 @@ import React, { useState, useRef } from 'react';
 import { AppUser, ChangeRequest } from '../../../types';
 import { supabase } from '../../../services/supabase';
 import { compressImage } from '../../../utils/imageCompression';
+import { uploadFile, getSignedUrl } from '../../../services/storage';
+import { useEffect } from 'react';
 
 interface UseStudentProfileProps {
     user: AppUser;
@@ -14,7 +16,41 @@ export const useStudentProfile = ({ user, onRequestChange }: UseStudentProfilePr
     const [showPhotoUploadConfirmation, setShowPhotoUploadConfirmation] = useState(false);
     const [successModal, setSuccessModal] = useState({ isOpen: false, message: '' });
     const [isUploading, setIsUploading] = useState(false);
+    const [resolvedPhotoUrl, setResolvedPhotoUrl] = useState<string | null>(user.studentData?.photoUrl || null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const resolveUrl = async () => {
+            // Priority: Approved photo > Pending photo update
+            let currentUrl = user.studentData?.photoUrl;
+
+            if (!currentUrl) {
+                // Check for pending photo request in user context? 
+                // Actually, useStudentProfile doesn't have access to all myRequests, only what changed.
+                // Wait, I can pass myRequests to this hook if needed, but let's stick to the user object first.
+            }
+
+            if (!currentUrl) return;
+
+            // If it's a supabase storage URL for avatars or documents, get a signed one
+            if (currentUrl.includes('/avatars/') || currentUrl.includes('/documents/')) {
+                try {
+                    const bucket = currentUrl.includes('/avatars/') ? 'avatars' : 'documents';
+                    const path = currentUrl.split(`/${bucket}/`).pop();
+                    if (path) {
+                        const signedUrl = await getSignedUrl(bucket, path);
+                        setResolvedPhotoUrl(signedUrl);
+                    }
+                } catch (error) {
+                    console.error('Failed to resolve signed URL:', error);
+                }
+            } else {
+                setResolvedPhotoUrl(currentUrl);
+            }
+        };
+
+        resolveUrl();
+    }, [user.studentData?.photoUrl]);
 
     const handleProfilePhotoUpdate = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -40,30 +76,23 @@ export const useStudentProfile = ({ user, onRequestChange }: UseStudentProfilePr
     };
 
     const confirmPhotoUpdate = async () => {
-        if (!user.studentData) return;
+        console.log('Starting photo update confirmation...', { studentData: user.studentData, photoFile: photoUpdateModal.file });
+        if (!user.studentData) {
+            console.warn('Missing studentData, cannot update photo');
+            return;
+        }
 
         // If we have a file, upload it first
         let finalPhotoUrl = photoUpdateModal.photoUrl;
 
         if (photoUpdateModal.file) {
+            console.log('Uploading photo file...');
             setIsUploading(true);
             try {
-                const fileExt = photoUpdateModal.file.name.split('.').pop();
-                const fileName = `${user.studentData.schoolId}/${user.studentData.id}/${Date.now()}.${fileExt}`;
-                const filePath = `student-photos/${fileName}`;
-
-                const { error: uploadError } = await supabase.storage
-                    .from('documents')
-                    .upload(filePath, photoUpdateModal.file);
-
-                if (uploadError) throw uploadError;
-
-                const { data } = supabase.storage
-                    .from('documents')
-                    .getPublicUrl(filePath);
-
-                finalPhotoUrl = data.publicUrl;
-
+                // Upload to 'documents' bucket as in current implementation, but now using utility with signed URL
+                const path = `student-updates/${user.studentData.id}`;
+                finalPhotoUrl = await uploadFile(photoUpdateModal.file, path, 'documents', false);
+                console.log('Upload successful, URL:', finalPhotoUrl);
             } catch (error) {
                 console.error('Error uploading photo:', error);
                 alert('Erro ao enviar a foto. Tente novamente.');
@@ -73,8 +102,12 @@ export const useStudentProfile = ({ user, onRequestChange }: UseStudentProfilePr
             setIsUploading(false);
         }
 
-        if (!finalPhotoUrl) return;
+        if (!finalPhotoUrl) {
+            console.warn('No photo URL for update request');
+            return;
+        }
 
+        console.log('Sending change request...');
         onRequestChange({
             schoolId: user.studentData.schoolId,
             studentId: user.studentData.id,
@@ -84,6 +117,7 @@ export const useStudentProfile = ({ user, onRequestChange }: UseStudentProfilePr
             payload: { photoUrl: finalPhotoUrl }
         });
 
+        console.log('Success, closing modal');
         setPhotoUpdateModal({ isOpen: false, photoUrl: null, file: null });
         setSuccessModal({ isOpen: true, message: 'Solicitação de atualização de foto enviada!' });
     };
@@ -114,6 +148,7 @@ export const useStudentProfile = ({ user, onRequestChange }: UseStudentProfilePr
         handleProfilePhotoUpdate,
         confirmPhotoUpdate,
         handleInfoUpdateRequest,
-        isUploading
+        isUploading,
+        resolvedPhotoUrl
     };
 };

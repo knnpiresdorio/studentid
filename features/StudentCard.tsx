@@ -56,11 +56,17 @@ export const StudentCard: React.FC<StudentCardProps> = ({ student, offlineMode }
               {/* Photo Ring */}
               <div className="relative mb-8 group-hover:scale-105 transition-transform duration-500">
                 <div className={`absolute inset-0 rounded-full border-[3px] ${statusBorder} animate-pulse-slow`}></div>
-                <img
-                  src={student.photoUrl}
-                  alt={student.fullName}
-                  className="w-48 h-48 rounded-full border-4 border-slate-900 shadow-2xl object-cover bg-slate-800 relative z-10"
-                />
+                {student.photoUrl ? (
+                  <img
+                    src={student.photoUrl}
+                    alt={student.fullName}
+                    className="w-48 h-48 rounded-full border-4 border-slate-900 shadow-2xl object-cover bg-slate-800 relative z-10"
+                  />
+                ) : (
+                  <div className="w-48 h-48 rounded-full border-4 border-slate-900 shadow-2xl bg-slate-800 flex items-center justify-center text-slate-500 relative z-10">
+                    <GraduationCap size={64} opacity={0.3} />
+                  </div>
+                )}
                 <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 z-20">
                   <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest text-white shadow-lg backdrop-blur-md border border-white/10 flex items-center gap-1.5 ${student.isActive ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-red-500/20 text-red-300 border-red-500/30'}`}>
                     {student.isActive ? <CheckCircle2 size={12} className="text-emerald-400" /> : <XCircle size={12} />}
@@ -103,7 +109,13 @@ export const StudentCard: React.FC<StudentCardProps> = ({ student, offlineMode }
             </div>
 
             <div className="p-6 text-center mt-auto">
-              <p className="text-[10px] text-white/50 font-medium mb-3 tracking-widest uppercase">Válido até: <span className="text-white/90">{new Date(student.validUntil).toLocaleDateString('pt-BR')}</span></p>
+              <p className="text-[10px] text-white/50 font-medium mb-3 tracking-widest uppercase">
+                Válido até: <span className="text-white/90">
+                  {student.validUntil && !isNaN(new Date(student.validUntil).getTime())
+                    ? new Date(student.validUntil).toLocaleDateString('pt-BR')
+                    : 'Não Informada'}
+                </span>
+              </p>
               <div className="flex items-center justify-center gap-2 text-blue-300 text-xs font-bold bg-white/5 py-2 px-4 rounded-full mx-auto w-fit border border-white/5 hover:bg-white/10 transition-all shadow-lg hover:shadow-blue-500/10">
                 <RotateCw size={14} />
                 <span>Toque para ver o QR Code</span>
@@ -133,7 +145,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({ student, offlineMode }
           <div className="mt-8 text-center w-full relative z-10">
             <div className="bg-white/5 rounded-2xl p-4 border border-white/10 backdrop-blur-sm mx-4">
               <p className="text-[10px] text-blue-300/50 uppercase tracking-widest mb-2 font-bold">Código de Verificação</p>
-              <p className="text-2xl font-mono font-bold text-white tracking-[0.2em]">{student.id.toUpperCase()}</p>
+              <p className="text-2xl font-mono font-bold text-white tracking-[0.2em]">{student.id.split('-')[0].toUpperCase()}</p>
             </div>
           </div>
 

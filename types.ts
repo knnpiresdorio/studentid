@@ -28,6 +28,7 @@ export interface School {
   logoUrl: string;
   type: SchoolType;
   isActive: boolean;
+  email: string;
   description?: string;
   createdAt: string;
 }
@@ -38,6 +39,7 @@ export interface Dependent {
   cpf: string;
   relation: string; // e.g., 'Filho', 'Cônjuge'
   birthDate: string;
+  email: string;
   photoUrl?: string; // Add photoUrl
   city?: string; // Add city
   state?: string; // Add state
@@ -57,6 +59,7 @@ export interface Student {
   validUntil: string;
   isActive: boolean;
   birthDate: string; // Add birthDate
+  email: string;
   dependents: Dependent[];
   isDependent?: boolean;
   parentName?: string;
@@ -101,6 +104,7 @@ export interface Partner {
     phone?: boolean;
   };
   isActive: boolean;
+  email: string;
 }
 
 export interface AppUser {

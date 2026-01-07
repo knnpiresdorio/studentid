@@ -38,7 +38,6 @@ export const StudentRoutes: React.FC = () => {
                             onRequestChange={(request) => {
                                 upsertChangeRequest.mutate({
                                     ...request,
-                                    id: `req_${Date.now()}`,
                                     status: 'PENDING',
                                     createdAt: new Date().toISOString()
                                 } as any);
