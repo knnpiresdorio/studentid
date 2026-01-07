@@ -62,7 +62,8 @@ export const StudentView: React.FC<StudentViewProps> = ({
         fileInputRef,
         handleProfilePhotoUpdate,
         confirmPhotoUpdate,
-        handleInfoUpdateRequest
+        handleInfoUpdateRequest,
+        isUploading
     } = useStudentProfile({ user, onRequestChange });
 
     // 2. Dependents Management
@@ -145,7 +146,8 @@ export const StudentView: React.FC<StudentViewProps> = ({
                 <PhotoPreviewModal
                     isOpen={photoUpdateModal.isOpen}
                     photoUrl={photoUpdateModal.photoUrl}
-                    onClose={() => setPhotoUpdateModal({ isOpen: false, photoUrl: null })}
+                    isProcessing={isUploading}
+                    onClose={() => setPhotoUpdateModal({ isOpen: false, photoUrl: null, file: null })}
                     onConfirm={confirmPhotoUpdate}
                 />
             </div>
@@ -211,7 +213,8 @@ export const StudentView: React.FC<StudentViewProps> = ({
             <PhotoPreviewModal
                 isOpen={photoUpdateModal.isOpen}
                 photoUrl={photoUpdateModal.photoUrl}
-                onClose={() => setPhotoUpdateModal({ isOpen: false, photoUrl: null })}
+                isProcessing={isUploading}
+                onClose={() => setPhotoUpdateModal({ isOpen: false, photoUrl: null, file: null })}
                 onConfirm={confirmPhotoUpdate}
             />
 

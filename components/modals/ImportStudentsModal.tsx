@@ -9,13 +9,17 @@ interface ImportStudentsModalProps {
     onClose: () => void;
     onImport: (students: Student[]) => void;
     school: School | null;
+    serverError?: string | null;
+    isImporting?: boolean;
 }
 
 export const ImportStudentsModal: React.FC<ImportStudentsModalProps> = ({
     isOpen,
     onClose,
     onImport,
-    school
+    school,
+    serverError,
+    isImporting
 }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { importData, errors, isParsing, parseCSV, clearImport } = useStudentImport(school);
@@ -98,16 +102,22 @@ export const ImportStudentsModal: React.FC<ImportStudentsModalProps> = ({
                             </div>
 
                             {/* Errors List */}
-                            {errors.length > 0 && (
+                            {(errors.length > 0 || serverError) && (
                                 <div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-xl p-4 overflow-hidden">
                                     <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-3">
                                         <AlertTriangle size={16} />
-                                        <p className="text-xs font-bold uppercase">Erros de Validação</p>
+                                        <p className="text-xs font-bold uppercase">
+                                            {serverError ? 'Erro no Servidor' : 'Erros de Validação'}
+                                        </p>
                                     </div>
                                     <div className="max-h-40 overflow-y-auto space-y-1 pr-2 custom-scrollbar">
-                                        {errors.map((err, i) => (
-                                            <p key={i} className="text-xs text-red-700 dark:text-red-300">• {err}</p>
-                                        ))}
+                                        {serverError ? (
+                                            <p className="text-xs text-red-700 dark:text-red-300 font-medium">{serverError}</p>
+                                        ) : (
+                                            errors.map((err, i) => (
+                                                <p key={i} className="text-xs text-red-700 dark:text-red-300">• {err}</p>
+                                            ))
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -146,10 +156,11 @@ export const ImportStudentsModal: React.FC<ImportStudentsModalProps> = ({
                                     variant="indigo"
                                     className="flex-1"
                                     onClick={() => onImport(importData as Student[])}
-                                    disabled={importData.length === 0}
-                                    leftIcon={<CheckCircle size={18} />}
+                                    disabled={importData.length === 0 || isImporting}
+                                    isLoading={isImporting}
+                                    leftIcon={!isImporting && <CheckCircle size={18} />}
                                 >
-                                    Confirmar Importação
+                                    {isImporting ? 'Importando...' : 'Confirmar Importação'}
                                 </Button>
                             </div>
                         </div>

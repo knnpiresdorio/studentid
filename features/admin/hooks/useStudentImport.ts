@@ -57,6 +57,8 @@ export const useStudentImport = (school: School | null) => {
             return;
         }
 
+        const processedCpfs = new Set<string>();
+
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i].trim();
             if (!line) continue;
@@ -66,13 +68,26 @@ export const useStudentImport = (school: School | null) => {
             const values = line.split(regex).map(v => v.trim().replace(/"/g, ''));
 
             const fullName = values[idxFullName];
-            const cpf = values[idxCpf];
+            let cpf = values[idxCpf]?.replace(/\D/g, '');
             const registrationNumber = values[idxRegistration];
 
             if (!fullName || !cpf || !registrationNumber) {
                 newErrors.push(`Linha ${i + 1}: Dados obrigatórios ausentes.`);
                 continue;
             }
+
+            // CPF Validation
+            if (cpf.length !== 11) {
+                newErrors.push(`Linha ${i + 1}: CPF inválido (${values[idxCpf]}). Deve ter 11 dígitos.`);
+                continue;
+            }
+
+            // Duplicate detection in CSV
+            if (processedCpfs.has(cpf)) {
+                newErrors.push(`Linha ${i + 1}: CPF duplicado no arquivo (${values[idxCpf]}).`);
+                continue;
+            }
+            processedCpfs.add(cpf);
 
             const student: Partial<Student> = {
                 fullName,
@@ -88,8 +103,7 @@ export const useStudentImport = (school: School | null) => {
                 photoUrl: '',
                 schoolId: school?.id || '',
                 schoolName: school?.name || '',
-                schoolType: school?.type || SchoolType.UNIVERSITY,
-                dependents: []
+                schoolType: school?.type || SchoolType.UNIVERSITY
             };
 
             results.push(student);

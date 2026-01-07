@@ -118,12 +118,13 @@ export const PhotoUpdateConfirmationModal: React.FC<PhotoUpdateConfirmationModal
 interface PhotoPreviewModalProps {
     isOpen: boolean;
     photoUrl: string | null;
+    isProcessing?: boolean;
     onClose: () => void;
     onConfirm: () => void;
 }
 
 export const PhotoPreviewModal: React.FC<PhotoPreviewModalProps> = ({
-    isOpen, photoUrl, onClose, onConfirm
+    isOpen, photoUrl, isProcessing, onClose, onConfirm
 }) => (
     <ModalOverlay isOpen={isOpen} onClose={onClose}>
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm p-6 ring-1 ring-black/5 dark:ring-white/10">
@@ -142,11 +143,24 @@ export const PhotoPreviewModal: React.FC<PhotoPreviewModalProps> = ({
             )}
 
             <div className="flex gap-3">
-                <button onClick={onClose} className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                <button
+                    onClick={onClose}
+                    disabled={isProcessing}
+                    className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+                >
                     Cancelar
                 </button>
-                <button onClick={onConfirm} className="flex-1 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20">
-                    Confirmar
+                <button
+                    onClick={onConfirm}
+                    disabled={isProcessing}
+                    className="flex-1 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 disabled:bg-blue-400 flex items-center justify-center gap-2"
+                >
+                    {isProcessing ? (
+                        <>
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Enviando...
+                        </>
+                    ) : 'Confirmar'}
                 </button>
             </div>
         </div>

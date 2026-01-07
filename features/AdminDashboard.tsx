@@ -84,7 +84,7 @@ interface AdminDashboardProps {
     schools: School[];
     partners: Partner[];
     auditLogs: AuditLog[];
-    addAuditLog: (schoolId: string, action: ActionType | string, details: string, actorId: string, actorName: string, actorRole: UserRole, metadata?: any) => void;
+    addAuditLog: (schoolId: string | null, action: ActionType | string, details: string, actorId: string, actorName: string, actorRole: UserRole, metadata?: any) => void;
     onLogout: () => void;
 }
 
@@ -163,6 +163,7 @@ export const AdminDashboard = ({
     const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
     const [editingStudent, setEditingStudent] = useState<Student | null>(null);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [importError, setImportError] = useState<string | null>(null);
 
     const isSuperAdmin = user?.role === UserRole.ADMIN;
 
@@ -265,7 +266,7 @@ export const AdminDashboard = ({
             );
 
             addAuditLog(
-                managedSchool?.id || 'ALL',
+                managedSchool?.id || null,
                 ActionType.MODIFICATION,
                 `${isActivating ? 'Ativou' : 'Desativou'} ${selectedStudents.length} membros em massa`,
                 user?.id || 'sys',
@@ -325,10 +326,11 @@ export const AdminDashboard = ({
     const bulkUpsertStudents = useBulkUpsertStudentsMutation();
 
     const handleImportStudents = async (students: Student[]) => {
+        setImportError(null);
         try {
             await bulkUpsertStudents.mutateAsync(students);
             addAuditLog(
-                managedSchool?.id || 'ALL',
+                managedSchool?.id || null,
                 ActionType.MODIFICATION,
                 `Importação em massa: ${students.length} novos membros adicionados via CSV.`,
                 user?.id || 'sys',
@@ -336,9 +338,17 @@ export const AdminDashboard = ({
                 user?.role || UserRole.ADMIN
             );
             setIsImportModalOpen(false);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error importing students:", error);
-            alert("Erro durante a importação. Verifique os dados e tente novamente.");
+            const message = error.message || "Erro desconhecido";
+
+            if (message.includes("permission denied") || message.includes("42501")) {
+                setImportError("Você não tem permissão para importar membros para esta escola. Verifique seu nível de acesso.");
+            } else if (message.includes("duplicate key") || message.includes("23505")) {
+                setImportError("Alguns CPFs já estão cadastrados em outras escolas ou registros.");
+            } else {
+                setImportError(`Erro na importação: ${message}`);
+            }
         }
     };
 
@@ -369,7 +379,7 @@ export const AdminDashboard = ({
                 await deleteStudent.mutateAsync(itemToDelete.id);
                 // Audit uses student info.
                 addAuditLog(
-                    student?.schoolId || managedSchool?.id || 'ALL',
+                    student?.schoolId || managedSchool?.id || null,
                     ActionType.DELETE,
                     `Removeu membro: ${student?.fullName || 'Desconhecido'} (${maskCPF(student?.cpf || '')})`,
                     user?.id || 'sys',
@@ -380,7 +390,7 @@ export const AdminDashboard = ({
                 const partner = partners.find(p => p.id === itemToDelete.id);
                 await deletePartner.mutateAsync(itemToDelete.id);
                 addAuditLog(
-                    partner?.schoolId || managedSchool?.id || 'ALL',
+                    partner?.schoolId || managedSchool?.id || null,
                     ActionType.DELETE,
                     `Removeu parceiro: ${partner?.name}`,
                     user?.id || 'sys',
@@ -462,9 +472,14 @@ export const AdminDashboard = ({
 
             <ImportStudentsModal
                 isOpen={isImportModalOpen}
-                onClose={() => setIsImportModalOpen(false)}
+                onClose={() => {
+                    setIsImportModalOpen(false);
+                    setImportError(null);
+                }}
                 onImport={handleImportStudents}
                 school={managedSchool}
+                serverError={importError}
+                isImporting={bulkUpsertStudents.isPending}
             />
 
             {/* Status Toggle Confirmation Modal */}
@@ -835,7 +850,13 @@ export const AdminDashboard = ({
                                                                 />
                                                             </td>
                                                             <td className="px-6 py-4 flex items-center gap-4">
-                                                                <img src={optimizeImage(student.photoUrl, 40, 40)} className="w-10 h-10 rounded-full object-cover bg-slate-800 border border-white/10 shadow-sm" alt="" />
+                                                                {student.photoUrl ? (
+                                                                    <img src={optimizeImage(student.photoUrl, 40, 40)} className="w-10 h-10 rounded-full object-cover bg-slate-800 border border-white/10 shadow-sm" alt="" />
+                                                                ) : (
+                                                                    <div className="w-10 h-10 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center shadow-sm">
+                                                                        <Users size={20} className="text-slate-500" />
+                                                                    </div>
+                                                                )}
                                                                 <span className="font-bold text-white group-hover:text-blue-400 transition-colors">{student.fullName}</span>
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-slate-300 font-mono text-xs">{maskCPF(student.cpf)}</td>

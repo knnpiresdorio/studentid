@@ -45,13 +45,7 @@ export const AnalyticsProvider: React.FC<{ children: ReactNode }> = ({ children 
             actor_name: actorName,
             actor_role: actorRole,
             action: action,
-            details: details,
-            metadata: {
-                userAgent: navigator.userAgent,
-                ipAddress: '127.0.0.1',
-                location: 'Unknown',
-                ...metadata
-            }
+            details: details
         };
 
         // Optimistic update (we create a temporary UI-friendly log)
@@ -64,7 +58,6 @@ export const AnalyticsProvider: React.FC<{ children: ReactNode }> = ({ children 
             action: action as ActionType,
             targetStudent: '-',
             details,
-            metadata: logData.metadata,
             created_at: new Date().toISOString()
         };
 

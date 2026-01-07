@@ -16,6 +16,7 @@ import {
 import { AppUser } from '../types';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
+import { formatCPF } from '../utils/formatters';
 
 interface LoginScreenProps {
     users?: AppUser[];
@@ -23,7 +24,7 @@ interface LoginScreenProps {
     onPasswordUpdate?: (userId: string, newPass: string) => void;
 }
 
-type ViewState = 'LOGIN' | 'FORGOT_PASSWORD' | 'CHANGE_PASSWORD';
+type ViewState = 'LOGIN' | 'FORGOT_PASSWORD' | 'CHANGE_PASSWORD' | 'FIRST_ACCESS';
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, onPasswordUpdate }) => {
     const { authError } = useAuth();
@@ -155,6 +156,108 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
         setError('');
         setForgotSuccess(false);
         setForgotEmail('');
+        // Reset First Access State
+        setFirstAccessStage('CHECK_CPF');
+        setFirstAccessCpf('');
+        setStudentIdentity(null);
+    };
+
+    // --- First Access State ---
+    const [firstAccessStage, setFirstAccessStage] = useState<'CHECK_CPF' | 'CONFIRM_IDENTITY' | 'REGISTER'>('CHECK_CPF');
+    const [firstAccessCpf, setFirstAccessCpf] = useState('');
+    const [firstAccessEmail, setFirstAccessEmail] = useState('');
+    const [firstAccessPassword, setFirstAccessPassword] = useState('');
+    const [firstAccessConfirm, setFirstAccessConfirm] = useState('');
+    const [studentIdentity, setStudentIdentity] = useState<{ found: boolean, name: string, school: string } | null>(null);
+
+    const handleCheckCpf = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setIsProcessing(true);
+
+        try {
+            const { data, error } = await supabase.rpc('check_student_identity', {
+                check_cpf: firstAccessCpf
+            });
+
+            if (error) throw error;
+
+            if (data && data.found) {
+                setStudentIdentity(data);
+                setFirstAccessStage('CONFIRM_IDENTITY');
+            } else {
+                setError('CPF não encontrado na base de alunos. Verifique se digitou corretamente ou contate sua escola.');
+            }
+        } catch (err: any) {
+            console.error('Check CPF Error:', err);
+            setError('Erro ao verificar CPF. Tente novamente.');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleConfirmIdentity = () => {
+        setFirstAccessStage('REGISTER');
+        setError('');
+    };
+
+    const handleRegisterSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+
+        if (firstAccessPassword !== firstAccessConfirm) {
+            setError('As senhas não coincidem.');
+            return;
+        }
+
+        if (firstAccessPassword.length < 6) {
+            setError('A senha deve ter no mínimo 6 caracteres.');
+            return;
+        }
+
+        setIsProcessing(true);
+
+        try {
+            // Register with Supabase Auth
+            // We pass the CPF in metadata so the Trigger can pick it up and link/block accordingly
+            const { data, error: signUpError } = await supabase.auth.signUp({
+                email: firstAccessEmail,
+                password: firstAccessPassword,
+                options: {
+                    data: {
+                        cpf: firstAccessCpf,
+                        full_name: studentIdentity?.full_name // Optional, trigger uses DB name anyway
+                    }
+                }
+            });
+
+            if (signUpError) throw signUpError;
+
+            // If successful (and trigger didn't block), we can auto-login or ask to verify email
+            // usually signUp returns session if email confirmation is disabled, or null if enabled.
+            if (data.user) {
+                // Check if session is established
+                if (data.session) {
+                    // Auto logged in
+                    // The AuthContext listener will pick this up and redirect
+                } else {
+                    // Verification email sent
+                    alert('Cadastro realizado! Verifique seu e-mail para confirmar a conta.');
+                    toggleView('LOGIN');
+                }
+            }
+
+        } catch (err: any) {
+            console.error('Registration Error:', err);
+            // Translate Trigger Errors if possible
+            if (err.message.includes('CPF não encontrado')) {
+                setError('Erro Crítico: A escola não autorizou este CPF. Contate a secretaria.');
+            } else {
+                setError(err.message || 'Erro ao criar conta.');
+            }
+        } finally {
+            setIsProcessing(false);
+        }
     };
 
     return (
@@ -324,15 +427,205 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
                                     </div>
                                 )}
 
-                                <button
-                                    type="submit"
-                                    disabled={isProcessing}
-                                    className="w-full bg-[#5664F5] hover:bg-[#4351e0] disabled:bg-[#a5acf8] text-white font-bold py-4 px-4 rounded-xl transition-all shadow-lg shadow-indigo-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 group"
-                                >
-                                    {isProcessing ? 'ENTRANDO...' : 'ENTRAR NO UNIPASS'}
-                                    {!isProcessing && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
-                                </button>
+                                <div className="space-y-4">
+                                    <button
+                                        type="submit"
+                                        disabled={isProcessing}
+                                        className="w-full bg-[#5664F5] hover:bg-[#4351e0] disabled:bg-[#a5acf8] text-white font-bold py-4 px-4 rounded-xl transition-all shadow-lg shadow-indigo-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 group"
+                                    >
+                                        {isProcessing ? 'ENTRANDO...' : 'ENTRAR NO UNIPASS'}
+                                        {!isProcessing && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleView('FIRST_ACCESS')}
+                                        className="w-full bg-white border-2 border-indigo-100 hover:border-indigo-200 text-indigo-600 font-bold py-4 px-4 rounded-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                                    >
+                                        PRIMEIRO ACESSO? CRIAR CONTA
+                                    </button>
+                                </div>
                             </form>
+                        </div>
+                    )}
+
+                    {view === 'FIRST_ACCESS' && (
+                        <div className="animate-slide-up">
+                            <button
+                                onClick={() => toggleView('LOGIN')}
+                                className="mb-6 flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 transition-colors font-medium"
+                            >
+                                <ArrowLeft size={16} /> Voltar ao Login
+                            </button>
+
+                            <div className="text-center mb-8">
+                                <div className="bg-green-50 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-sm">
+                                    <UserIcon className="text-green-600 w-8 h-8" />
+                                </div>
+                                <h2 className="text-2xl font-bold text-slate-900 mb-2">Primeiro Acesso</h2>
+                                {firstAccessStage === 'CHECK_CPF' && <p className="text-slate-500 text-sm">Informe seu CPF para localizarmos sua matrícula.</p>}
+                                {firstAccessStage === 'CONFIRM_IDENTITY' && <p className="text-slate-500 text-sm">Confirme se os dados abaixo estão corretos.</p>}
+                                {firstAccessStage === 'REGISTER' && <p className="text-slate-500 text-sm">Crie sua senha de acesso.</p>}
+                            </div>
+
+                            {/* STAGE 1: CHECK CPF */}
+                            {firstAccessStage === 'CHECK_CPF' && (
+                                <form onSubmit={handleCheckCpf} className="space-y-6">
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                                            SEU CPF
+                                        </label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <CreditCard className="h-5 w-5 text-slate-300" />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                required
+                                                className="block w-full pl-11 pr-4 py-3.5 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-300 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all outline-none font-medium tracking-widest"
+                                                placeholder="000.000.000-00"
+                                                maxLength={14}
+                                                value={firstAccessCpf}
+                                                onChange={(e) => setFirstAccessCpf(formatCPF(e.target.value))}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {(error) && (
+                                        <div className="bg-red-50 text-red-600 text-sm p-4 rounded-xl flex items-start gap-3 border border-red-100">
+                                            <span>⚠️</span>
+                                            <div>{error}</div>
+                                        </div>
+                                    )}
+
+                                    <button
+                                        type="submit"
+                                        disabled={isProcessing}
+                                        className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-4 rounded-xl transition-all shadow-lg shadow-green-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                                    >
+                                        {isProcessing ? 'VERIFICANDO...' : 'CONTINUAR'}
+                                        {!isProcessing && <ArrowRight size={18} />}
+                                    </button>
+                                </form>
+                            )}
+
+                            {/* STAGE 2: CONFIRM IDENTITY */}
+                            {firstAccessStage === 'CONFIRM_IDENTITY' && studentIdentity && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 text-center">
+                                        <div className="w-16 h-16 bg-slate-200 rounded-full mx-auto mb-3 flex items-center justify-center">
+                                            <UserIcon size={32} className="text-slate-400" />
+                                        </div>
+                                        <h3 className="font-bold text-lg text-slate-800 mb-1">{studentIdentity.name}</h3>
+                                        <p className="text-indigo-600 font-medium text-sm mb-4">{studentIdentity.school}</p>
+                                        <div className="text-xs text-slate-400 bg-white p-2 rounded border border-slate-100 inline-block">
+                                            Este é você?
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setFirstAccessStage('CHECK_CPF')}
+                                            className="flex-1 py-3 border border-slate-200 text-slate-500 font-bold rounded-xl hover:bg-slate-50 transition-colors"
+                                        >
+                                            Não sou eu
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleConfirmIdentity}
+                                            className="flex-1 py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-500 shadow-lg shadow-green-200 transition-all"
+                                        >
+                                            Sim, sou eu
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* STAGE 3: REGISTER */}
+                            {firstAccessStage === 'REGISTER' && (
+                                <form onSubmit={handleRegisterSubmit} className="space-y-5 animate-slide-up">
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                                            SEU E-MAIL
+                                        </label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <CircleUserRound className="h-5 w-5 text-slate-300" />
+                                            </div>
+                                            <input
+                                                type="email"
+                                                required
+                                                className="block w-full pl-11 pr-4 py-3.5 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none font-medium"
+                                                placeholder="seu@email.com"
+                                                value={firstAccessEmail}
+                                                onChange={(e) => setFirstAccessEmail(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                                            CRIE UMA SENHA
+                                        </label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <Lock className="h-5 w-5 text-slate-300" />
+                                            </div>
+                                            <input
+                                                type={showPassword ? "text" : "password"}
+                                                required
+                                                className="block w-full pl-11 pr-12 py-3.5 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none font-medium tracking-widest"
+                                                placeholder="••••••••"
+                                                value={firstAccessPassword}
+                                                onChange={(e) => setFirstAccessPassword(e.target.value)}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-300 hover:text-indigo-600 transition-colors"
+                                            >
+                                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                                            CONFIRME A SENHA
+                                        </label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <Lock className="h-5 w-5 text-slate-300" />
+                                            </div>
+                                            <input
+                                                type={showPassword ? "text" : "password"}
+                                                required
+                                                className="block w-full pl-11 pr-4 py-3.5 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none font-medium tracking-widest"
+                                                placeholder="••••••••"
+                                                value={firstAccessConfirm}
+                                                onChange={(e) => setFirstAccessConfirm(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {(error) && (
+                                        <div className="bg-red-50 text-red-600 text-sm p-4 rounded-xl flex items-start gap-3 border border-red-100">
+                                            <span>⚠️</span>
+                                            <div className="text-xs font-medium">{error}</div>
+                                        </div>
+                                    )}
+
+                                    <button
+                                        type="submit"
+                                        disabled={isProcessing}
+                                        className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-4 rounded-xl transition-all shadow-lg shadow-green-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                                    >
+                                        {isProcessing ? 'CRIANDO CONTA...' : 'FINALIZAR CADASTRO'}
+                                        {!isProcessing && <CheckCircle size={18} />}
+                                    </button>
+                                </form>
+                            )}
                         </div>
                     )}
 
