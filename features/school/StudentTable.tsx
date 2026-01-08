@@ -72,7 +72,7 @@ export const StudentTable: React.FC<StudentTableProps> = ({
 
             <div className="flex-1 overflow-auto custom-scrollbar relative bg-slate-50/50 dark:bg-slate-950/50">
                 <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
-                    <thead className="sticky top-0 z-20 bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-white/5 uppercase text-xs tracking-wider shadow-sm">
+                    <thead className="sticky top-0 lg:top-[112px] z-20 bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-white/5 uppercase text-xs tracking-wider shadow-sm">
                         <tr>
                             <th className="px-6 py-4 w-12 bg-slate-50 dark:bg-slate-900">
                                 <input

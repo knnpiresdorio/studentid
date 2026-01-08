@@ -4,13 +4,15 @@ import { supabase } from '../../../services/supabase';
 import { compressImage } from '../../../utils/imageCompression';
 import { uploadFile, getSignedUrl } from '../../../services/storage';
 import { useEffect } from 'react';
+import { useSubmitProfileUpdate } from '../api';
 
 interface UseStudentProfileProps {
     user: AppUser;
-    onRequestChange: (request: Omit<ChangeRequest, 'id' | 'createdAt' | 'status'>) => void;
+    myRequests: ChangeRequest[];
+    onRequestChange: (request: Omit<ChangeRequest, 'id' | 'createdAt' | 'status'> & { id?: string }) => Promise<void>;
 }
 
-export const useStudentProfile = ({ user, onRequestChange }: UseStudentProfileProps) => {
+export const useStudentProfile = ({ user, myRequests, onRequestChange }: UseStudentProfileProps) => {
     const [infoModal, setInfoModal] = useState({ isOpen: false, reason: '' });
     const [photoUpdateModal, setPhotoUpdateModal] = useState<{ isOpen: boolean, photoUrl: string | null, file: File | null }>({ isOpen: false, photoUrl: null, file: null });
     const [showPhotoUploadConfirmation, setShowPhotoUploadConfirmation] = useState(false);
@@ -19,18 +21,24 @@ export const useStudentProfile = ({ user, onRequestChange }: UseStudentProfilePr
     const [resolvedPhotoUrl, setResolvedPhotoUrl] = useState<string | null>(user.studentData?.photoUrl || null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Secure RPC mutation
+    const submitProfileUpdate = useSubmitProfileUpdate();
+
     useEffect(() => {
         const resolveUrl = async () => {
-            // Priority: Approved photo > Pending photo update
-            let currentUrl = user.studentData?.photoUrl;
+            // Priority: Pending Photo Request > Official Approved Photo
+            // This ensures the user sees "what they sent" while waiting for approval.
+            const pendingPhotoRequest = myRequests.find(r =>
+                (r.type === 'UPDATE_PHOTO' || r.type === 'update_photo')
+                && r.status === 'PENDING'
+            );
+
+            let currentUrl = pendingPhotoRequest?.payload?.photoUrl || user.studentData?.photoUrl;
 
             if (!currentUrl) {
-                // Check for pending photo request in user context? 
-                // Actually, useStudentProfile doesn't have access to all myRequests, only what changed.
-                // Wait, I can pass myRequests to this hook if needed, but let's stick to the user object first.
-            }
-
-            if (!currentUrl) return;
+                setResolvedPhotoUrl(null);
+                return;
+            };
 
             // If it's a supabase storage URL for avatars or documents, get a signed one
             if (currentUrl.includes('/avatars/') || currentUrl.includes('/documents/')) {
@@ -50,7 +58,7 @@ export const useStudentProfile = ({ user, onRequestChange }: UseStudentProfilePr
         };
 
         resolveUrl();
-    }, [user.studentData?.photoUrl]);
+    }, [user.studentData?.photoUrl, myRequests]);
 
     const handleProfilePhotoUpdate = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -89,9 +97,9 @@ export const useStudentProfile = ({ user, onRequestChange }: UseStudentProfilePr
             console.log('Uploading photo file...');
             setIsUploading(true);
             try {
-                // Upload to 'documents' bucket as in current implementation, but now using utility with signed URL
+                // Upload to 'documents' bucket. Use getSigned=true to ensure immediate validity if bucket is private.
                 const path = `student-updates/${user.studentData.id}`;
-                finalPhotoUrl = await uploadFile(photoUpdateModal.file, path, 'documents', false);
+                finalPhotoUrl = await uploadFile(photoUpdateModal.file, path, 'documents', true);
                 console.log('Upload successful, URL:', finalPhotoUrl);
             } catch (error) {
                 console.error('Error uploading photo:', error);
@@ -107,32 +115,45 @@ export const useStudentProfile = ({ user, onRequestChange }: UseStudentProfilePr
             return;
         }
 
-        console.log('Sending change request...');
-        onRequestChange({
-            schoolId: user.studentData.schoolId,
-            studentId: user.studentData.id,
-            studentName: user.studentData.fullName,
-            type: 'UPDATE_PHOTO',
-            reason: 'Atualização de foto de perfil',
-            payload: { photoUrl: finalPhotoUrl }
-        });
+        console.log('Sending change request using Secure RPC...');
 
-        console.log('Success, closing modal');
-        setPhotoUpdateModal({ isOpen: false, photoUrl: null, file: null });
-        setSuccessModal({ isOpen: true, message: 'Solicitação de atualização de foto enviada!' });
+        try {
+            await submitProfileUpdate.mutateAsync({
+                studentId: user.id, // Auth ID for Profile FK key
+                schoolId: user.studentData.schoolId,
+                studentName: user.studentData.fullName,
+                type: 'UPDATE_PHOTO',
+                reason: 'Atualização de foto de perfil', // Fixed reason for photo
+                payload: { photoUrl: finalPhotoUrl }
+            });
+
+            console.log('Success (RPC), closing modal');
+            setPhotoUpdateModal({ isOpen: false, photoUrl: null, file: null });
+
+            // Strict success message
+            setSuccessModal({ isOpen: true, message: 'Solicitação Enviada! Se já houver uma pendente, ela foi atualizada.' });
+        } catch (error) {
+            console.error('Failed to submit request via RPC. Full error:', error);
+            // Non-blocking error logging
+        }
     };
 
-    const handleInfoUpdateRequest = () => {
+    const handleInfoUpdateRequest = async () => {
         if (!user.studentData || !infoModal.reason.trim()) return;
-        onRequestChange({
-            schoolId: user.studentData.schoolId,
-            studentId: user.studentData.id,
-            studentName: user.studentData.fullName,
-            type: 'UPDATE_INFO',
-            reason: infoModal.reason
-        });
-        setInfoModal({ isOpen: false, reason: '' });
-        setSuccessModal({ isOpen: true, message: 'Solicitação de correção enviada!' });
+        try {
+            await submitProfileUpdate.mutateAsync({
+                studentId: user.id,
+                schoolId: user.studentData.schoolId,
+                studentName: user.studentData.fullName,
+                type: 'UPDATE_INFO',
+                reason: infoModal.reason,
+                payload: {}
+            });
+            setInfoModal({ isOpen: false, reason: '' });
+            setSuccessModal({ isOpen: true, message: 'Solicitação de correção enviada!' });
+        } catch (error) {
+            console.error('Error submitting info update:', error);
+        }
     };
 
     return {

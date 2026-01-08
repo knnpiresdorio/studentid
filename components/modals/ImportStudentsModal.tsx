@@ -75,10 +75,10 @@ export const ImportStudentsModal: React.FC<ImportStudentsModalProps> = ({
                                         <p className="font-bold dark:text-white text-lg">Clique para fazer upload do CSV</p>
                                         <p className="text-slate-500 text-sm mt-1">Ou arraste seu arquivo aqui</p>
                                         <div className="mt-4 flex flex-wrap justify-center gap-2">
-                                            {['Nome', 'CPF', 'Matrícula', 'Email'].map(h => (
+                                            {['Nome', 'CPF', 'Matrícula', 'Email', 'Nascimento', 'Validade'].map(h => (
                                                 <span key={h} className="text-[10px] bg-slate-100 dark:bg-white/5 px-2 py-1 rounded text-slate-500 font-bold uppercase">{h}*</span>
                                             ))}
-                                            {['Curso', 'Nascimento', 'Validade'].map(h => (
+                                            {['Curso'].map(h => (
                                                 <span key={h} className="text-[10px] bg-slate-100 dark:bg-white/5 px-2 py-1 rounded text-slate-400 font-bold uppercase">{h}</span>
                                             ))}
                                         </div>

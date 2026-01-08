@@ -46,7 +46,7 @@ export const GlobalAuditTrail: React.FC<GlobalAuditTrailProps> = ({
 
             <div className="bg-slate-900/60 backdrop-blur-2xl rounded-2xl shadow-xl border border-white/5 overflow-hidden ring-1 ring-white/5">
                 <table className="w-full text-left text-sm text-slate-300">
-                    <thead className="bg-slate-950/50 text-slate-400 font-bold border-b border-white/5 uppercase text-xs tracking-wider">
+                    <thead className="sticky top-0 lg:top-[112px] z-20 bg-slate-950/50 text-slate-400 font-bold border-b border-white/5 uppercase text-xs tracking-wider backdrop-blur-md">
                         <tr>
                             <th className="px-6 py-4">Data/Hora</th>
                             <th className="px-6 py-4">Responsável</th>

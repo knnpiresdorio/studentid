@@ -99,7 +99,11 @@ export const useUpsertStudentMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: async (student: Student) => {
-            const { data, error } = await supabase.from('students').upsert(student).select().single();
+            // FIX: Remove 'dependents' and derived fields that are not columns in the 'students' view/table
+            // This prevents 400 Bad Request or "Column not found" errors when approving requests
+            const { dependents, isDependent, parentName, userType, ...dbPayload } = student;
+
+            const { data, error } = await supabase.from('students').upsert(dbPayload).select().single();
             if (error) throw error;
             return data;
         },
@@ -176,26 +180,79 @@ export const useUpsertChangeRequestMutation = () => {
                 payload.id = request.id;
             }
 
+            // CRITICAL FIX: Check for existing pending request if we don't have an ID
+            // This prevents 409 Conflicts if the client cache is stale
+            if (!payload.id) {
+                const { data: existing } = await supabase
+                    .from('change_requests')
+                    .select('id')
+                    .eq('student_id', payload.student_id)
+                    .eq('type', payload.type)
+                    .eq('status', 'PENDING')
+                    .maybeSingle();
+
+                if (existing) {
+                    console.log('Found existing pending request during mutation, switching to update:', existing.id);
+                    payload.id = existing.id;
+                }
+            }
+
             const { data, error } = await supabase.from('change_requests').upsert(payload).select().single();
             if (error) throw error;
             return data;
         },
         onMutate: async (newRequest) => {
             await queryClient.cancelQueries({ queryKey: [STUDENT_KEYS.requests] });
-            const previousRequests = queryClient.getQueryData<ChangeRequest[]>([STUDENT_KEYS.requests]);
-            queryClient.setQueryData<ChangeRequest[]>([STUDENT_KEYS.requests], (old) => {
-                if (!old) return [newRequest];
-                const exists = old.find(r => r.id === newRequest.id);
-                if (exists) return old.map(r => r.id === newRequest.id ? newRequest : r);
-                return [newRequest, ...old];
+            const previoushuman = queryClient.getQueryData([STUDENT_KEYS.requests]);
+            queryClient.setQueryData([STUDENT_KEYS.requests], (old: any) => {
+                return [...(old || []), { ...newRequest, id: 'temp-id', created_at: new Date().toISOString() }];
             });
-            return { previousRequests };
+            return { previoushuman };
         },
-        onError: (err, newRequest, context) => {
-            queryClient.setQueryData([STUDENT_KEYS.requests], context?.previousRequests);
+        onError: (err, newTodo, context: any) => {
+            queryClient.setQueryData([STUDENT_KEYS.requests], context.previoushuman);
         },
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: [STUDENT_KEYS.requests] });
         },
+    });
+};
+
+/**
+ * Secure mutation for Profile Updates (Photo/Info) using Database RPC
+ * detailed in migration: 20260107_rpc_request_profile_update
+ */
+export const useSubmitProfileUpdate = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (params: {
+            studentId: string;
+            schoolId: string;
+            studentName: string;
+            type: 'UPDATE_PHOTO' | 'UPDATE_INFO';
+            reason: string;
+            payload: any;
+        }) => {
+            console.log('Invoking RPC request_profile_update with:', params);
+            const { data, error } = await supabase.rpc('request_profile_update', {
+                p_student_id: params.studentId,
+                p_school_id: params.schoolId,
+                p_student_name: params.studentName,
+                p_type: params.type,
+                p_reason: params.reason,
+                p_payload: params.payload
+            });
+
+            if (error) {
+                console.error('RPC Error:', error);
+                throw error;
+            }
+            return data;
+        },
+        onSuccess: () => {
+            // Refresh requests so the UI updates immediately
+            queryClient.invalidateQueries({ queryKey: ['change_requests'] });
+            queryClient.invalidateQueries({ queryKey: [STUDENT_KEYS.requests] });
+        }
     });
 };

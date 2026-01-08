@@ -13,7 +13,7 @@ const StudentView = React.lazy(() => import('../features/StudentView').then(modu
 
 export const StudentRoutes: React.FC = () => {
     const { user, logout } = useAuth();
-    const { changeRequests } = useMembers(); // consume necessary data
+    const { changeRequests, isLoading } = useMembers(); // consume necessary data
     const { partners } = usePartners();
     const { auditLogs } = useAnalytics();
 
@@ -32,15 +32,34 @@ export const StudentRoutes: React.FC = () => {
                             user={user}
                             partners={partners}
                             myRequests={changeRequests.filter(r => r.studentId === user.studentData?.id || r.studentId === user.studentData?.parentName)}
+                            isLoadingRequests={isLoading}
                             auditLogs={auditLogs}
                             onUpdateStudent={(student) => upsertStudent.mutate(student)}
                             onAddDependentUser={() => { }}
-                            onRequestChange={(request) => {
-                                upsertChangeRequest.mutate({
-                                    ...request,
-                                    status: 'PENDING',
-                                    createdAt: new Date().toISOString()
-                                } as any);
+                            onRequestChange={async (request) => {
+                                try {
+                                    await upsertChangeRequest.mutateAsync({
+                                        ...request,
+                                        status: 'PENDING',
+                                        createdAt: new Date().toISOString()
+                                    } as any);
+                                } catch (error: any) {
+                                    // If conflict (409) or Postgres Unique Violation (23505), it means request already exists.
+                                    // We treat this as success because the goal (having a request) is achieved.
+                                    const isConflict =
+                                        error?.status === 409 ||
+                                        error?.code === '23505' || // Postgres unique violation code
+                                        error?.message?.includes('409') ||
+                                        error?.message?.includes('duplicate key') ||
+                                        error?.details?.includes('already exists');
+
+                                    if (isConflict) {
+                                        console.warn('Request already exists (409/23505), treating as success to unblock user.');
+                                    } else {
+                                        console.error('Critical error in onRequestChange:', error);
+                                        throw error;
+                                    }
+                                }
                             }}
                             onReportError={() => { }}
                             onLogout={logout}

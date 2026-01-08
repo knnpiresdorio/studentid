@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-    X, Upload, Info
+    X, Upload, Info, Clock
 } from 'lucide-react';
 import { AppUser, Partner, ChangeRequest, Student, AuditLog, UserRole } from '../types';
 import { StudentCard } from './StudentCard';
@@ -32,10 +32,11 @@ interface StudentViewProps {
     user: AppUser;
     partners: Partner[];
     myRequests: ChangeRequest[];
+    isLoadingRequests?: boolean;
     auditLogs: AuditLog[];
     onUpdateStudent: (student: Student) => void;
     onAddDependentUser: (newDependentUser: AppUser) => void;
-    onRequestChange: (request: Omit<ChangeRequest, 'id' | 'createdAt' | 'status'>) => void;
+    onRequestChange: (request: Omit<ChangeRequest, 'id' | 'createdAt' | 'status'>) => Promise<void>;
     onReportError: (error: string, context: string) => void;
     onLogout: () => void;
 }
@@ -44,6 +45,7 @@ export const StudentView: React.FC<StudentViewProps> = ({
     user,
     partners,
     myRequests,
+    isLoadingRequests,
     auditLogs,
     onRequestChange,
     onLogout
@@ -65,7 +67,7 @@ export const StudentView: React.FC<StudentViewProps> = ({
         handleInfoUpdateRequest,
         isUploading,
         resolvedPhotoUrl
-    } = useStudentProfile({ user, onRequestChange });
+    } = useStudentProfile({ user, myRequests, onRequestChange });
 
     // 2. Dependents Management
     const {
@@ -98,31 +100,56 @@ export const StudentView: React.FC<StudentViewProps> = ({
 
     const isDependentUser = user.studentData?.isDependent;
     const hasPhoto = !!user.studentData?.photoUrl;
-    const hasPendingPhoto = myRequests.some(r => r.type === 'UPDATE_PHOTO' && r.status === 'PENDING');
+    // Check for pending photo (case insensitive for safety)
+    const hasPendingPhoto = myRequests.some(r =>
+        (r.type === 'UPDATE_PHOTO' || r.type === 'update_photo') &&
+        r.status === 'PENDING'
+    );
+
+    // Check for rejected photo request to show reason
+    const rejectedPhotoRequest = myRequests
+        .filter(r => (r.type === 'UPDATE_PHOTO' || r.type === 'update_photo') && r.status === 'REJECTED')
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+
+    // Initial Loading State
+    if (isLoadingRequests) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-500 border-t-transparent"></div>
+            </div>
+        );
+    }
 
     // --- Render Mandatory Photo Upload (Force Onboarding) ---
     if (!hasPhoto && !hasPendingPhoto && user.role === UserRole.STUDENT && activeTab === 'id') {
         return (
             <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-8 animate-fade-in">
                 <div className="max-w-md w-full text-center space-y-8">
-                    <div className="mx-auto w-24 h-24 bg-indigo-600/20 rounded-full flex items-center justify-center text-indigo-400 ring-4 ring-indigo-500/10">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></svg>
+                    <div className={`mx-auto w-24 h-24 rounded-full flex items-center justify-center ring-4 ${rejectedPhotoRequest ? 'bg-red-500/20 text-red-500 ring-red-500/10' : 'bg-indigo-600/20 text-indigo-400 ring-indigo-500/10'}`}>
+                        {rejectedPhotoRequest ? <X size={48} /> : (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></svg>
+                        )}
                     </div>
                     <div className="space-y-2">
-                        <h1 className="text-3xl font-black text-white italic font-display">QUASE LÁ!</h1>
+                        <h1 className="text-3xl font-black text-white italic font-display">
+                            {rejectedPhotoRequest ? 'FOTO RECUSADA' : 'QUASE LÁ!'}
+                        </h1>
                         <p className="text-slate-400 text-sm">
-                            Sua instituição já liberou seu acesso, mas precisamos de uma foto para gerar sua carteirinha digital oficial.
+                            {rejectedPhotoRequest
+                                ? `Sua última foto foi recusada: "${rejectedPhotoRequest.reason}". Por favor, envie uma nova foto seguindo as regras.`
+                                : 'Sua instituição já liberou seu acesso, mas precisamos de uma foto para gerar sua carteirinha digital oficial.'}
                         </p>
                     </div>
 
                     <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
                         <p className="text-xs font-bold text-amber-400 uppercase tracking-widest flex items-center justify-center gap-2">
-                            <Info size={14} /> Dica para uma boa foto:
+                            <Info size={14} /> REGRAS PARA A FOTO:
                         </p>
                         <ul className="text-xs text-slate-400 space-y-2 text-left list-disc list-inside">
                             <li>Fundo neutro e boa iluminação</li>
-                            <li>Rosto centralizado e visível</li>
-                            <li>Evite óculos de sol ou chapéus</li>
+                            <li>Rosto centralizado e VISÍVEL</li>
+                            <li>EVITE óculos de sol ou chapéus</li>
+                            <li>Sua foto será enviada à coordenação.</li>
                         </ul>
                     </div>
 
@@ -238,16 +265,27 @@ export const StudentView: React.FC<StudentViewProps> = ({
             ) : (
                 <>
                     {activeTab === 'id' && user.studentData && (
-                        <DigitalID
-                            studentData={{
-                                ...user.studentData,
-                                photoUrl: resolvedPhotoUrl || (myRequests.find(r => r.type === 'UPDATE_PHOTO' && r.status === 'PENDING')?.payload?.photoUrl) || ''
-                            }}
-                            isOffline={isOffline}
-                            onReportError={() => setInfoModal({ isOpen: true, reason: '' })}
-                            onUpdatePhoto={() => setShowPhotoUploadConfirmation(true)}
-                            isDependentUser={isDependentUser || false}
-                        />
+                        <div className="space-y-4">
+                            {hasPendingPhoto && !hasPhoto && (
+                                <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-3 animate-fade-in">
+                                    <Clock className="text-amber-500 shrink-0" size={20} />
+                                    <div className="flex-1">
+                                        <h4 className="text-sm font-bold text-amber-500">Foto em Análise</h4>
+                                        <p className="text-xs text-slate-400">Sua foto foi enviada e está aguardando aprovação da secretaria.</p>
+                                    </div>
+                                </div>
+                            )}
+                            <DigitalID
+                                studentData={{
+                                    ...user.studentData,
+                                    photoUrl: resolvedPhotoUrl || (myRequests.find(r => r.type === 'UPDATE_PHOTO' && r.status === 'PENDING')?.payload?.photoUrl) || ''
+                                }}
+                                isOffline={isOffline}
+                                onReportError={() => setInfoModal({ isOpen: true, reason: '' })}
+                                onUpdatePhoto={() => setShowPhotoUploadConfirmation(true)}
+                                isDependentUser={isDependentUser || false}
+                            />
+                        </div>
                     )}
 
 

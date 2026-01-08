@@ -65,7 +65,7 @@ export const AuditTrail: React.FC<AuditTrailProps> = ({
 
             <div className="flex-1 overflow-auto custom-scrollbar">
                 <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
-                    <thead className="sticky top-0 bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-white/5 uppercase text-xs tracking-wider">
+                    <thead className="sticky top-0 lg:top-[112px] z-20 bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-white/5 uppercase text-xs tracking-wider">
                         <tr>
                             <th className="px-6 py-4">Data/Hora</th>
                             <th className="px-6 py-4">Ação</th>
