@@ -48,3 +48,22 @@ export const formatPhone = (value: string): string => {
 
     return formatted.substring(0, 15);
 };
+/**
+ * Formats a raw number string into a CNPJ (00.000.000/0000-00)
+ */
+export const formatCNPJ = (value: string): string => {
+    const raw = value.replace(/\D/g, '');
+    let formatted = raw;
+
+    if (raw.length > 12) {
+        formatted = `${raw.substring(0, 2)}.${raw.substring(2, 5)}.${raw.substring(5, 8)}/${raw.substring(8, 12)}-${raw.substring(12, 14)}`;
+    } else if (raw.length > 8) {
+        formatted = `${raw.substring(0, 2)}.${raw.substring(2, 5)}.${raw.substring(5, 8)}/${raw.substring(8)}`;
+    } else if (raw.length > 5) {
+        formatted = `${raw.substring(0, 2)}.${raw.substring(2, 5)}.${raw.substring(5)}`;
+    } else if (raw.length > 2) {
+        formatted = `${raw.substring(0, 2)}.${raw.substring(2)}`;
+    }
+
+    return formatted.substring(0, 18);
+};

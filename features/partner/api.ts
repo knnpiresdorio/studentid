@@ -30,7 +30,10 @@ export const useUpsertPartnerMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: async (partner: Partner) => {
-            const { data, error } = await supabase.from('partners').upsert(partner).select().single();
+            // Filter out fields that don't exist in the database table
+            const { activePromotions, socialVisibility, phoneNumber, instagramUrl, facebookUrl, tiktokUrl, ...dbPartner } = partner as any;
+
+            const { data, error } = await supabase.from('partners').upsert(dbPartner).select().single();
             if (error) throw error;
             return data;
         },

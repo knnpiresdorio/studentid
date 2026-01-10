@@ -4,10 +4,51 @@ import { ChangeRequest } from '../../types';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { StudentAvatar } from '../student/components/StudentAvatar';
+import { getSignedUrl } from '../../services/storage';
 
 interface RequestListProps {
     requests: ChangeRequest[];
     onResolve: (reqId: string, action: 'APPROVE' | 'REJECT') => void;
+}
+
+const PhotoPreview: React.FC<{ url: string; alt: string; className?: string }> = ({ url, alt, className }) => {
+    const [displayUrl, setDisplayUrl] = React.useState(url);
+
+    React.useEffect(() => {
+        // If the URL is a relative path or likely from our 'documents' bucket
+        // we might need to refresh it if it expired.
+        // For now, let's assume if it contains 'storage/v1/object/sign' it's a signed URL
+        // and we check if it's broken.
+        if (url.includes('storage/v1/object/sign')) {
+            // Check if URL is expired by parsing token or just trying to fetch
+            // Simpler approach for now: if user reports it's broken, they refresh the page.
+            // But better: Parse the path from the signed URL and get a new one.
+            try {
+                const urlObj = new URL(url);
+                const pathParts = urlObj.pathname.split('/documents/');
+                if (pathParts.length > 1) {
+                    const filePath = decodeURIComponent(pathParts[1]);
+                    getSignedUrl('documents', filePath, 3600).then(newUrl => {
+                        setDisplayUrl(newUrl);
+                    }).catch(err => console.error("Error refreshing signed URL:", err));
+                }
+            } catch (e) {
+                console.error("Error parsing URL for refresh:", e);
+            }
+        }
+    }, [url]);
+
+    return (
+        <img
+            src={displayUrl}
+            className={className}
+            alt={alt}
+            onError={(e) => {
+                // If it fails to load, it might be expired
+                console.warn("Image load failed, attempting to refresh...");
+            }}
+        />
+    )
 }
 
 export const RequestList: React.FC<RequestListProps> = ({
@@ -62,7 +103,7 @@ export const RequestList: React.FC<RequestListProps> = ({
                                         <div className="flex flex-col items-center">
                                             <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-2">Nova Foto</span>
                                             <div className="w-32 h-32 rounded-2xl overflow-hidden border-2 border-blue-500 shadow-lg shadow-blue-500/20 transition-all hover:scale-110">
-                                                <img src={req.payload.photoUrl} className="w-full h-full object-cover" alt="Nova" />
+                                                <PhotoPreview url={req.payload.photoUrl} className="w-full h-full object-cover" alt="Nova" />
                                             </div>
                                         </div>
                                     </div>

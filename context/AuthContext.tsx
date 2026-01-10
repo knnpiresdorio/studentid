@@ -155,6 +155,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const logout = async () => {
         await supabase.auth.signOut();
+        localStorage.removeItem('unipass_attendant_session');
         setUser(null);
     };
 
@@ -212,18 +213,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
         // Initial session check
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (mounted) {
+        const checkInitialSession = async () => {
+            try {
+                // 1. Check for Supabase Auth Session
+                const { data: { session } } = await supabase.auth.getSession();
                 if (session) {
-                    handleAuthChange(session);
-                } else {
-                    setLoading(false);
+                    await handleAuthChange(session);
+                    return;
                 }
+
+                // 2. Fallback: Check for Attendant Session in LocalStorage
+                const savedAttendant = localStorage.getItem('unipass_attendant_session');
+                if (savedAttendant) {
+                    const attendantData = JSON.parse(savedAttendant);
+                    setUser(attendantData);
+                }
+            } catch (err) {
+                console.error('Initial session fetch failed:', err);
+            } finally {
+                if (mounted) setLoading(false);
             }
-        }).catch(err => {
-            console.error('Initial session fetch failed:', err);
-            if (mounted) setLoading(false);
-        });
+        };
+
+        checkInitialSession();
 
         return () => {
             mounted = false;

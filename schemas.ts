@@ -53,9 +53,9 @@ export const partnerSchema = z.object({
     category: z.string().min(1, 'Categoria é obrigatória'),
     discount: z.string().min(1, 'Desconto é obrigatório'),
     address: z.string().min(5, 'Endereço completo é obrigatório'),
-    city: z.string().optional(),
-    state: z.string().length(2, 'UF deve ter 2 caracteres').optional(),
-    description: z.string().max(500, 'Descrição não pode exceder 500 caracteres'),
+    city: z.string().min(1, 'Cidade é obrigatória'),
+    state: z.string().length(2, 'UF deve ter 2 caracteres'),
+    description: z.string().min(5, 'Descrição deve ter pelo menos 5 caracteres').max(500, 'Descrição não pode exceder 500 caracteres'),
     logoUrl: z.string().regex(/^(https?:\/\/|data:image\/|blob:)/, 'URL da logo inválida'),
     bannerUrl: z.string().regex(/^(https?:\/\/|data:image\/|blob:)/, 'URL do banner inválida').optional().or(z.literal('')),
     phoneNumber: z.string().regex(/^\(?\d{2}\)?\s?\d{4,5}-?\d{4}$/, 'Telefone inválido (Ex: 11 99999-9999)').optional().or(z.literal('')),
@@ -70,6 +70,7 @@ export const partnerSchema = z.object({
     }).optional(),
     isActive: z.boolean(),
     email: z.string().email('E-mail inválido'),
+    cnpj: z.string().min(18, 'CNPJ é obrigatório (00.000.000/0000-00)'),
     activePromotions: z.array(promotionSchema).optional(),
 });
 
@@ -80,6 +81,7 @@ export const schoolSchema = z.object({
     type: z.nativeEnum(SchoolType),
     isActive: z.boolean(),
     email: z.string().email('E-mail inválido'),
+    cnpj: z.string().min(18, 'CNPJ é obrigatório (00.000.000/0000-00)'),
     description: z.string().optional().or(z.literal('')),
     createdAt: z.string().optional()
 });

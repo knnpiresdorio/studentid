@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { School } from '../../../types';
+import { School, SchoolType } from '../../../types';
 import { Input, Textarea } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
 import { Save, Upload, ChevronRight } from 'lucide-react';
+import { formatCNPJ } from '../../../utils/formatters';
 
 interface SchoolFormProps {
     school: School;
@@ -33,23 +34,39 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
             <div className="space-y-5">
                 <div>
                     <Input
-                        label="Nome da Escola"
+                        label={<span>Nome da Escola <span className="text-red-500">*</span></span>}
                         value={school.name}
                         onChange={e => onUpdate({ name: e.target.value })}
                     />
                 </div>
                 <div>
-                    <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Tipo</label>
+                    <Input
+                        label={<span>CNPJ <span className="text-red-500">*</span></span>}
+                        value={school.cnpj || ''}
+                        onChange={e => onUpdate({ cnpj: formatCNPJ(e.target.value) })}
+                        placeholder="00.000.000/0000-00"
+                    />
+                </div>
+                <div>
+                    <Input
+                        label={<span>E-mail de Contato <span className="text-red-500">*</span></span>}
+                        value={school.email || ''}
+                        onChange={e => onUpdate({ email: e.target.value })}
+                        placeholder="contato@escola.com"
+                        type="email"
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Tipo <span className="text-red-500">*</span></label>
                     <div className="relative">
                         <select
                             className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 text-white font-medium focus:ring-2 focus:ring-blue-500/50 outline-none transition-all appearance-none cursor-pointer hover:bg-slate-950/80"
                             value={school.type}
                             onChange={e => onUpdate({ type: e.target.value as any })}
                         >
-                            <option value="Universidade" className="bg-slate-900">Universidade</option>
-                            <option value="Escola Técnica" className="bg-slate-900">Escola Técnica</option>
-                            <option value="Escola de Idiomas" className="bg-slate-900">Escola de Idiomas</option>
-                            <option value="Colégio" className="bg-slate-900">Colégio</option>
+                            {Object.values(SchoolType).map(type => (
+                                <option key={type} value={type} className="bg-slate-900">{type}</option>
+                            ))}
                         </select>
                         <ChevronRight className="absolute right-3 top-3.5 rotate-90 text-slate-500 pointer-events-none" size={16} />
                     </div>
@@ -65,7 +82,7 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
 
                 {/* Image Upload Toggle */}
                 <div>
-                    <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Logo da Escola</label>
+                    <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Logo da Escola <span className="text-red-500">*</span></label>
                     <div className="flex items-center gap-4 mb-3">
                         <div className="flex bg-slate-950/80 rounded-lg p-1 border border-white/10 shadow-inner">
                             <button
@@ -126,7 +143,13 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
 
                 <div className="pt-6 border-t border-white/5">
                     <Button
-                        onClick={onSave}
+                        onClick={() => {
+                            if (!school.name || !school.cnpj || school.cnpj.length < 18 || !school.type || !school.logoUrl || !school.email) {
+                                alert("Por favor, preencha todos os campos obrigatórios (Nome, CNPJ completo, E-mail, Tipo e Logo).");
+                                return;
+                            }
+                            onSave();
+                        }}
                         variant="indigo"
                         leftIcon={<Save size={18} />}
                         className="w-full md:w-auto"

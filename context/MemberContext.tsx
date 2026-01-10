@@ -7,11 +7,13 @@ import {
     useUpsertStudentMutation,
     useDeleteStudentMutation,
     useUpsertSchoolMutation,
-    useUpsertChangeRequestMutation
+    useUpsertChangeRequestMutation,
+    usePaginatedStudentsQuery
 } from '../hooks/useSupabaseQuery';
 
 interface MemberContextType {
     schools: School[];
+    students: Student[];
     changeRequests: ChangeRequest[];
     isLoading: boolean;
     error: any;
@@ -28,6 +30,7 @@ const MemberContext = createContext<MemberContextType | undefined>(undefined);
 export const MemberProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const { user } = useAuth();
     const { data: schools = [], isLoading: loadingSchools, error: errorSchools } = useSchoolsQuery(!!user);
+    const { data: students = [], isLoading: loadingStudents, error: errorStudents } = usePaginatedStudentsQuery({ page: 1, pageSize: 1000 }, !!user && user.role === 'ADMIN');
     const { data: changeRequests = [], isLoading: loadingReq, error: errorReq } = useChangeRequestsQuery(!!user);
 
     const upsertStudentMutation = useUpsertStudentMutation();
@@ -35,8 +38,8 @@ export const MemberProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const upsertSchoolMutation = useUpsertSchoolMutation();
     const upsertChangeRequestMutation = useUpsertChangeRequestMutation();
 
-    const isLoading = loadingSchools || loadingReq;
-    const error = errorSchools || errorReq;
+    const isLoading = loadingSchools || loadingReq || loadingStudents;
+    const error = errorSchools || errorReq || errorStudents;
 
     const upsertStudent = (student: Student) => upsertStudentMutation.mutate(student);
     const deleteStudent = (id: string) => deleteStudentMutation.mutate(id);
@@ -46,6 +49,7 @@ export const MemberProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     return (
         <MemberContext.Provider value={{
             schools,
+            students: students.data || [],
             changeRequests,
             isLoading,
             error,

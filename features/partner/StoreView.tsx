@@ -16,10 +16,11 @@ import { useValidationHistory } from './hooks/useValidationHistory';
 import { PromotionManager } from './promotions/PromotionManager';
 import { ScannerView } from './validation/ScannerView';
 import { HeaderControls } from '../../components/HeaderControls';
+import { AttendantManager } from './team/AttendantManager';
 
 // Chart components moved to MetricsDashboard
 
-type Tab = 'my-store' | 'validate' | 'logs' | 'metrics';
+type Tab = 'my-store' | 'validate' | 'logs' | 'metrics' | 'team';
 
 const PARTNER_CATEGORIES = [
     "Alimentação & Bebidas",
@@ -46,7 +47,8 @@ export const StoreView: React.FC = () => {
     const [activeTab, setActiveTab] = useState<Tab>(isStoreUser ? 'validate' : 'metrics');
 
     // Partner Logic
-    const currentPartner = partners.find(p => p.id === user?.username) ||
+    const currentPartner = partners.find(p => p.id === user?.partner_id) ||
+        partners.find(p => p.id === user?.username) ||
         partners.find(p => user?.username.startsWith(`${p.id}.`)) ||
         partners[0];
 
@@ -192,6 +194,12 @@ export const StoreView: React.FC = () => {
                             <History size={20} className={activeTab === 'logs' ? 'text-indigo-600' : 'text-slate-400'} />
                             Histórico de Validações
                         </button>
+                        {isStoreAdmin && (
+                            <button onClick={() => setActiveTab('team')} className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all ${activeTab === 'team' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}`}>
+                                <Users size={20} className={activeTab === 'team' ? 'text-indigo-600' : 'text-slate-400'} />
+                                Minha Equipe
+                            </button>
+                        )}
                     </nav>
                 </div>
                 <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl text-sm font-bold transition-colors">
@@ -524,6 +532,11 @@ export const StoreView: React.FC = () => {
                             students={students}
                         />
                     )}
+
+                    {/* TAB: TEAM */}
+                    {activeTab === 'team' && isStoreAdmin && currentPartner && (
+                        <AttendantManager partnerId={currentPartner.id} />
+                    )}
                 </div>
             </main>
 
@@ -549,6 +562,12 @@ export const StoreView: React.FC = () => {
                     <History size={24} strokeWidth={activeTab === 'logs' ? 2.5 : 2} />
                     <span className="text-[10px] font-bold">Logs</span>
                 </button>
+                {isStoreAdmin && (
+                    <button onClick={() => setActiveTab('team')} className={`flex flex-col items-center gap-1 ${activeTab === 'team' ? 'text-indigo-600' : 'text-slate-400'}`}>
+                        <Users size={24} strokeWidth={activeTab === 'team' ? 2.5 : 2} />
+                        <span className="text-[10px] font-bold">Equipe</span>
+                    </button>
+                )}
             </div>
 
             {/* SCANNER MODAL */}

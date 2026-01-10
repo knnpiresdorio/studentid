@@ -11,12 +11,14 @@ import {
     Globe,
     Smartphone,
     ArrowLeft,
-    CheckCircle
+    CheckCircle,
+    Building2,
+    Store as StoreIcon
 } from 'lucide-react';
 import { AppUser } from '../types';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
-import { formatCPF } from '../utils/formatters';
+import { formatCPF, formatCNPJ } from '../utils/formatters';
 
 interface LoginScreenProps {
     users?: AppUser[];
@@ -70,15 +72,29 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
 
         console.log('Attempting login with:', cleanUsername);
 
-        const isCPF = /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/.test(cleanUsername) || /^\d{11}$/.test(cleanUsername);
-
-        if (isCPF) {
-            setError('Para sua segurança, utilize o e-mail cadastrado. Caso não lembre qual e-mail está vinculado ao seu CPF, contate o suporte.');
-            setIsProcessing(false);
-            return;
-        }
-
         try {
+            // 1. Try Attendant Login First (Simplified Login)
+            const { data: attendantData, error: attendantError } = await supabase.rpc('login_attendant', {
+                p_username: cleanUsername,
+                p_password: cleanPassword
+            });
+
+            if (attendantData) {
+                console.log('Attendant login successful:', attendantData);
+                localStorage.setItem('unipass_attendant_session', JSON.stringify(attendantData));
+                window.location.reload(); // Force AuthContext to reload and pick up session
+                return;
+            }
+
+            // 2. Standard Supabase Auth Login
+            const isCPF = /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/.test(cleanUsername) || /^\d{11}$/.test(cleanUsername);
+
+            if (isCPF) {
+                setError('Para sua segurança, utilize o e-mail cadastrado. Caso não lembre qual e-mail está vinculado ao seu CPF, contate o suporte.');
+                setIsProcessing(false);
+                return;
+            }
+
             const { data, error: signInError } = await supabase.auth.signInWithPassword({
                 email: cleanUsername,
                 password: cleanPassword,
@@ -157,27 +173,40 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
         setForgotSuccess(false);
         setForgotEmail('');
         // Reset First Access State
-        setFirstAccessStage('CHECK_CPF');
-        setFirstAccessCpf('');
-        setStudentIdentity(null);
+        setFirstAccessStage('SELECT_ROLE');
+        setFirstAccessInput('');
+        setFoundIdentity(null);
+        setFirstAccessRole('STUDENT');
     };
 
     // --- First Access State ---
-    const [firstAccessStage, setFirstAccessStage] = useState<'CHECK_CPF' | 'CONFIRM_IDENTITY' | 'REGISTER'>('CHECK_CPF');
-    const [firstAccessCpf, setFirstAccessCpf] = useState('');
+    const [firstAccessStage, setFirstAccessStage] = useState<'SELECT_ROLE' | 'CHECK_ID' | 'CONFIRM_IDENTITY' | 'REGISTER'>('SELECT_ROLE');
+    const [firstAccessRole, setFirstAccessRole] = useState<'STUDENT' | 'SCHOOL_ADMIN' | 'STORE_ADMIN'>('STUDENT');
+    const [firstAccessInput, setFirstAccessInput] = useState(''); // CPF or CNPJ
     const [firstAccessEmail, setFirstAccessEmail] = useState('');
     const [firstAccessPassword, setFirstAccessPassword] = useState('');
     const [firstAccessConfirm, setFirstAccessConfirm] = useState('');
-    const [studentIdentity, setStudentIdentity] = useState<{ found: boolean, activated: boolean, masked_email: string } | null>(null);
+    const [foundIdentity, setFoundIdentity] = useState<{ id: string, name: string, activated: boolean, masked_email?: string } | null>(null);
 
-    const handleCheckCpf = async (e: React.FormEvent) => {
+    const handleCheckIdentity = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setIsProcessing(true);
 
         try {
-            const { data, error } = await supabase.rpc('check_student_identity', {
-                check_cpf: firstAccessCpf
+            let rpcName = 'check_student_identity';
+            let paramName = 'check_cpf';
+
+            if (firstAccessRole === 'SCHOOL_ADMIN') {
+                rpcName = 'check_school_identity';
+                paramName = 'check_cnpj';
+            } else if (firstAccessRole === 'STORE_ADMIN') {
+                rpcName = 'check_partner_identity';
+                paramName = 'check_cnpj';
+            }
+
+            const { data, error } = await supabase.rpc(rpcName, {
+                [paramName]: firstAccessInput
             }).single() as any;
 
             if (error) throw error;
@@ -188,19 +217,27 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
                     return;
                 }
 
-                if (data.masked_email === 'contate-sua-escola') {
+                if (firstAccessRole === 'STUDENT' && data.masked_email === 'contate-sua-escola') {
                     setError('Seu cadastro foi localizado, mas não possui um e-mail vinculado. Por favor, contate sua instituição.');
                     return;
                 }
 
-                setStudentIdentity(data);
-                setFirstAccessStage('CONFIRM_IDENTITY');
+                setFoundIdentity(data);
+
+                // Admin skips confirm identity stage as per user feedback
+                if (firstAccessRole !== 'STUDENT') {
+                    setFirstAccessStage('REGISTER');
+                } else {
+                    setFirstAccessStage('CONFIRM_IDENTITY');
+                }
             } else {
-                setError('CPF não encontrado na base de alunos. Verifique se digitou corretamente ou contate sua escola.');
+                const term = firstAccessRole === 'STUDENT' ? 'CPF' : 'CNPJ';
+                const base = firstAccessRole === 'STUDENT' ? 'alunos' : (firstAccessRole === 'SCHOOL_ADMIN' ? 'escolas' : 'parceiros');
+                setError(`${term} não encontrado na base de ${base}. Verifique se digitou corretamente.`);
             }
         } catch (err: any) {
-            console.error('Check CPF Error:', err);
-            setError('Erro ao verificar CPF. Tente novamente.');
+            console.error('Check Identity Error:', err);
+            setError('Erro ao verificar identidade. Tente novamente.');
         } finally {
             setIsProcessing(false);
         }
@@ -228,29 +265,33 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
         setIsProcessing(true);
 
         try {
-            // Register with Supabase Auth
-            // We pass the CPF in metadata so the Trigger can pick it up and link/block accordingly
+            const signUpOptions: any = {
+                data: {
+                    full_name: foundIdentity?.name,
+                    role: firstAccessRole
+                }
+            };
+
+            if (firstAccessRole === 'STUDENT') {
+                signUpOptions.data.cpf = firstAccessInput;
+            } else if (firstAccessRole === 'SCHOOL_ADMIN') {
+                signUpOptions.data.school_id = foundIdentity?.id;
+            } else if (firstAccessRole === 'STORE_ADMIN') {
+                signUpOptions.data.partner_id = foundIdentity?.id;
+            }
+
             const { data, error: signUpError } = await supabase.auth.signUp({
                 email: firstAccessEmail,
                 password: firstAccessPassword,
-                options: {
-                    data: {
-                        cpf: firstAccessCpf
-                    }
-                }
+                options: signUpOptions
             });
 
             if (signUpError) throw signUpError;
 
-            // If successful (and trigger didn't block), we can auto-login or ask to verify email
-            // usually signUp returns session if email confirmation is disabled, or null if enabled.
             if (data.user) {
-                // Check if session is established
                 if (data.session) {
                     // Auto logged in
-                    // The AuthContext listener will pick this up and redirect
                 } else {
-                    // Verification email sent
                     alert('Cadastro realizado! Verifique seu e-mail para confirmar a conta.');
                     toggleView('LOGIN');
                 }
@@ -258,12 +299,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
 
         } catch (err: any) {
             console.error('Registration Error:', err);
-            // Translate Trigger Errors if possible
-            if (err.message.includes('CPF não encontrado')) {
-                setError('Erro Crítico: A escola não autorizou este CPF. Contate a secretaria.');
-            } else {
-                setError(err.message || 'Erro ao criar conta.');
-            }
+            setError(err.message || 'Erro ao criar conta.');
         } finally {
             setIsProcessing(false);
         }
@@ -472,30 +508,79 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
                                     <UserIcon className="text-green-600 w-8 h-8" />
                                 </div>
                                 <h2 className="text-2xl font-bold text-slate-900 mb-2">Primeiro Acesso</h2>
-                                {firstAccessStage === 'CHECK_CPF' && <p className="text-slate-500 text-sm">Informe seu CPF para localizarmos sua matrícula.</p>}
+                                {firstAccessStage === 'SELECT_ROLE' && <p className="text-slate-500 text-sm">Selecione o seu perfil de acesso.</p>}
+                                {firstAccessStage === 'CHECK_ID' && <p className="text-slate-500 text-sm">Informe os dados para localizarmos seu cadastro.</p>}
                                 {firstAccessStage === 'CONFIRM_IDENTITY' && <p className="text-slate-500 text-sm">Confirme se os dados abaixo estão corretos.</p>}
                                 {firstAccessStage === 'REGISTER' && <p className="text-slate-500 text-sm">Crie sua senha de acesso.</p>}
                             </div>
 
-                            {/* STAGE 1: CHECK CPF */}
-                            {firstAccessStage === 'CHECK_CPF' && (
-                                <form onSubmit={handleCheckCpf} className="space-y-6">
+                            {/* STAGE: SELECT ROLE */}
+                            {firstAccessStage === 'SELECT_ROLE' && (
+                                <div className="space-y-4 animate-fade-in">
+                                    <button
+                                        onClick={() => { setFirstAccessRole('STUDENT'); setFirstAccessStage('CHECK_ID'); }}
+                                        className="w-full p-4 bg-white border-2 border-slate-100 hover:border-indigo-100 rounded-2xl flex items-center gap-4 transition-all group"
+                                    >
+                                        <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                            <UserIcon size={24} />
+                                        </div>
+                                        <div className="text-left">
+                                            <h3 className="font-bold text-slate-900">Sou Aluno</h3>
+                                            <p className="text-xs text-slate-500">Acesso via CPF e matrícula escolar.</p>
+                                        </div>
+                                        <ArrowRight size={20} className="ml-auto text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
+                                    </button>
+
+                                    <button
+                                        onClick={() => { setFirstAccessRole('SCHOOL_ADMIN'); setFirstAccessStage('CHECK_ID'); }}
+                                        className="w-full p-4 bg-white border-2 border-slate-100 hover:border-indigo-100 rounded-2xl flex items-center gap-4 transition-all group"
+                                    >
+                                        <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                            <Building2 size={24} />
+                                        </div>
+                                        <div className="text-left">
+                                            <h3 className="font-bold text-slate-900">Instituição de Ensino</h3>
+                                            <p className="text-xs text-slate-500">Gestão de alunos e benefícios.</p>
+                                        </div>
+                                        <ArrowRight size={20} className="ml-auto text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
+                                    </button>
+
+                                    <button
+                                        onClick={() => { setFirstAccessRole('STORE_ADMIN'); setFirstAccessStage('CHECK_ID'); }}
+                                        className="w-full p-4 bg-white border-2 border-slate-100 hover:border-indigo-100 rounded-2xl flex items-center gap-4 transition-all group"
+                                    >
+                                        <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                            <StoreIcon size={24} />
+                                        </div>
+                                        <div className="text-left">
+                                            <h3 className="font-bold text-slate-900">Estabelecimento Parceiro</h3>
+                                            <p className="text-xs text-slate-500">Validação de descontos e métricas.</p>
+                                        </div>
+                                        <ArrowRight size={20} className="ml-auto text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* STAGE 1: CHECK ID */}
+                            {firstAccessStage === 'CHECK_ID' && (
+                                <form onSubmit={handleCheckIdentity} className="space-y-6">
                                     <div>
                                         <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                                            SEU CPF
+                                            {firstAccessRole === 'STUDENT' ? 'SEU CPF' : 'CNPJ DA ENTIDADE'}
                                         </label>
                                         <div className="relative">
                                             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                <CreditCard className="h-5 w-5 text-slate-300" />
+                                                {firstAccessRole === 'STUDENT' ? <CreditCard className="h-5 w-5 text-slate-300" /> : <Building2 className="h-5 w-5 text-slate-300" />}
                                             </div>
                                             <input
                                                 type="text"
                                                 required
-                                                className="block w-full pl-11 pr-4 py-3.5 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-300 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all outline-none font-medium tracking-widest"
-                                                placeholder="000.000.000-00"
-                                                maxLength={14}
-                                                value={firstAccessCpf}
-                                                onChange={(e) => setFirstAccessCpf(formatCPF(e.target.value))}
+                                                className="block w-full pl-11 pr-4 py-3.5 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none font-medium tracking-widest"
+                                                placeholder={firstAccessRole === 'STUDENT' ? "000.000.000-00" : "00.000.000/0000-00"}
+                                                value={firstAccessInput}
+                                                onChange={(e) => setFirstAccessInput(
+                                                    firstAccessRole === 'STUDENT' ? formatCPF(e.target.value) : formatCNPJ(e.target.value)
+                                                )}
                                             />
                                         </div>
                                     </div>
@@ -510,7 +595,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
                                     <button
                                         type="submit"
                                         disabled={isProcessing}
-                                        className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-4 rounded-xl transition-all shadow-lg shadow-green-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-4 rounded-xl transition-all shadow-lg shadow-indigo-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
                                     >
                                         {isProcessing ? 'VERIFICANDO...' : 'CONTINUAR'}
                                         {!isProcessing && <ArrowRight size={18} />}
@@ -518,8 +603,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
                                 </form>
                             )}
 
-                            {/* STAGE 2: CONFIRM IDENTITY */}
-                            {firstAccessStage === 'CONFIRM_IDENTITY' && studentIdentity && (
+                            {/* STAGE 2: CONFIRM IDENTITY (Students Only) */}
+                            {firstAccessStage === 'CONFIRM_IDENTITY' && foundIdentity && (
                                 <div className="space-y-6 animate-fade-in">
                                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 text-center">
                                         <div className="w-16 h-16 bg-emerald-100 rounded-full mx-auto mb-4 flex items-center justify-center text-emerald-600">
@@ -530,7 +615,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
                                             Encontramos seus dados em nossa base. Para sua segurança, confirme o registro usando o e-mail:
                                         </p>
                                         <div className="bg-white px-4 py-2 rounded-lg border border-slate-100 inline-block font-mono text-indigo-600 font-bold mb-4">
-                                            {studentIdentity.masked_email}
+                                            {foundIdentity.masked_email}
                                         </div>
                                         <p className="text-xs text-slate-400 italic">
                                             Este é o e-mail que você deve utilizar na próxima etapa.
@@ -540,7 +625,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users = [], onLogin, o
                                     <div className="flex gap-3">
                                         <button
                                             type="button"
-                                            onClick={() => setFirstAccessStage('CHECK_CPF')}
+                                            onClick={() => setFirstAccessStage('CHECK_ID')}
                                             className="flex-1 py-3 border border-slate-200 text-slate-500 font-bold rounded-xl hover:bg-slate-50 transition-colors"
                                         >
                                             Não sou eu

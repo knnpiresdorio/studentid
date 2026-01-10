@@ -13,20 +13,31 @@ export const useRequestActions = (schoolId: string) => {
 
     const handleResolveRequest = async (request: ChangeRequest, action: 'APPROVE' | 'REJECT', rejectionReason?: string) => {
         const isApproval = action === 'APPROVE';
+        const actorName = user?.name || 'Admin';
 
         const updatedRequest: ChangeRequest = {
             ...request,
             status: isApproval ? 'APPROVED' : 'REJECTED',
             reason: isApproval ? request.reason : (rejectionReason || request.reason),
             resolvedAt: new Date().toISOString(),
-            resolvedBy: user?.name || 'Admin'
+            resolvedBy: actorName
         };
 
         try {
+            // 1. First, always update the request status
             await upsertChangeRequest.mutateAsync(updatedRequest);
 
             if (isApproval) {
-                const student = students.find(s => s.id === request.studentId);
+                // 2. Try to find the student in local context
+                let student = (students || []).find(s => s.id === request.studentId);
+
+                // 3. FALLBACK: If not found (common for school admins with paginated lists), fetch directly
+                if (!student) {
+                    console.log('Student not found in context, fetching directly for approval:', request.studentId);
+                    const { fetchStudentById } = await import('../hooks/useSupabaseQuery');
+                    student = await fetchStudentById(request.studentId);
+                }
+
                 if (student) {
                     let updatedStudent = { ...student };
                     let actionDetail = '';
@@ -36,7 +47,7 @@ export const useRequestActions = (schoolId: string) => {
                         await upsertStudent.mutateAsync(updatedStudent);
                         actionDetail = `Inclusão de dependente: ${request.payload.name}`;
                     } else if (request.type === 'DELETE_DEPENDENT') {
-                        updatedStudent.dependents = student.dependents.filter(d => d.id !== request.dependentId);
+                        updatedStudent.dependents = (student.dependents || []).filter(d => d.id !== request.dependentId);
                         await upsertStudent.mutateAsync(updatedStudent);
                         actionDetail = `Remoção de dependente: ${request.dependentName}`;
                     } else if (request.type === 'UPDATE_PHOTO' && request.payload?.photoUrl) {
@@ -45,30 +56,34 @@ export const useRequestActions = (schoolId: string) => {
                         actionDetail = `Atualização de foto de perfil`;
                     }
 
+                    // 4. Always Log on success
                     addAuditLog(
                         schoolId,
                         'APPROVE_REQUEST',
                         `Aprovou solicitação (${request.type}) para ${student.fullName}. ${actionDetail}`,
                         user?.id || 'sys',
-                        user?.name || 'Admin',
+                        actorName,
                         user?.role || UserRole.ADMIN,
                         { requestId: request.id, studentId: student.id }
                     );
+                } else {
+                    console.error('Final failure: Student still not found after fallback for request:', request.id);
                 }
             } else {
+                // Handle Rejection
                 addAuditLog(
                     schoolId,
                     'REJECT_REQUEST',
                     `Rejeitou solicitação (${request.type}) de ${request.studentName}. Motivo: ${rejectionReason}`,
                     user?.id || 'sys',
-                    user?.name || 'Admin',
+                    actorName,
                     user?.role || UserRole.ADMIN,
                     { requestId: request.id, studentId: request.studentId }
                 );
             }
         } catch (error) {
             console.error("Error resolving request:", error);
-            alert("Erro ao processar solicitação.");
+            alert("Erro ao processar solicitação. Verifique sua conexão ou permissões.");
             throw error;
         }
     };

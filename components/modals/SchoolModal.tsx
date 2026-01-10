@@ -5,6 +5,7 @@ import { uploadFile } from '../../services/storage';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SchoolSchema, schoolSchema } from '../../schemas';
 import { School, SchoolType } from '../../types';
+import { formatCNPJ } from '../../utils/formatters';
 
 interface SchoolModalProps {
     isOpen: boolean;
@@ -123,7 +124,7 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         {/* Logo Upload Section */}
                         <div className="md:col-span-1 space-y-4">
-                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Logo da Instituição</label>
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Logo da Instituição <span className="text-red-500">*</span></label>
                             <div className="relative group w-full aspect-video rounded-2xl bg-slate-950 border border-white/10 overflow-hidden shadow-xl ring-2 ring-blue-500/20 transition-all group-hover:ring-blue-500/50 flex items-center justify-center">
                                 <Controller
                                     control={control}
@@ -150,7 +151,7 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
 
                         <div className="md:col-span-1 space-y-6">
                             <div>
-                                <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Nome da Instituição</label>
+                                <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Nome da Instituição <span className="text-red-500">*</span></label>
                                 <input
                                     className={`w-full bg-slate-950/50 border ${errors.name ? 'border-red-500' : 'border-white/10'} rounded-xl p-3.5 text-white font-bold focus:ring-2 focus:ring-blue-500/50 outline-none transition-all placeholder-slate-600`}
                                     placeholder="Ex: Universidade Federal"
@@ -171,7 +172,25 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Tipo de Instituição</label>
+                                <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">CNPJ <span className="text-red-500">*</span></label>
+                                <Controller
+                                    control={control}
+                                    name="cnpj"
+                                    render={({ field }) => (
+                                        <input
+                                            className={`w-full bg-slate-950/50 border ${errors.cnpj ? 'border-red-500' : 'border-white/10'} rounded-xl p-3.5 text-white font-bold focus:ring-2 focus:ring-blue-500/50 outline-none transition-all placeholder-slate-600`}
+                                            placeholder="00.000.000/0000-00"
+                                            {...field}
+                                            value={field.value || ''}
+                                            onChange={(e) => field.onChange(formatCNPJ(e.target.value))}
+                                        />
+                                    )}
+                                />
+                                {errors.cnpj && <span className="text-red-400 text-xs mt-1 block font-medium">{errors.cnpj.message}</span>}
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Tipo de Instituição <span className="text-red-500">*</span></label>
                                 <div className="relative">
                                     <select
                                         className="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3.5 text-white font-bold focus:ring-2 focus:ring-blue-500/50 outline-none transition-all appearance-none cursor-pointer"
@@ -202,7 +221,7 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
                             <ShieldCheck size={20} className="text-emerald-500/50" />
                             <div>
                                 <span className="text-[10px] uppercase font-bold tracking-widest block">Ambiente Seguro</span>
-                                <span className="text-[9px] text-slate-600 uppercase font-medium">Os dados são protegidos por criptografia</span>
+                                <span className="text-[9px] text-slate-600 uppercase font-medium">Dados protegidos por criptografia</span>
                             </div>
                         </div>
                         <div className="flex gap-4">
@@ -211,7 +230,7 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
                                 onClick={onClose}
                                 className="px-8 py-3 rounded-xl border border-white/10 font-bold text-slate-400 hover:bg-white/5 hover:text-white transition-all tracking-wide"
                             >
-                                Descartar
+                                Voltar
                             </button>
                             <button
                                 type="submit"
@@ -224,7 +243,7 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
                                         Salvando...
                                     </>
                                 ) : (
-                                    school ? 'Salvar Edição' : 'Criar Instituição'
+                                    school ? 'Salvar' : 'Criar Instituição'
                                 )}
                             </button>
                         </div>

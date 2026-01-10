@@ -748,10 +748,10 @@ export const AdminDashboard = ({
                     {managedSchool && (
                         <div className="animate-fade-in space-y-6">
                             <div className="flex gap-4 border-b border-white/10">
-                                <button onClick={() => setManageTab('info')} className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${manageTab === 'info' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>Informações</button>
-                                <button onClick={() => setManageTab('access')} className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${manageTab === 'access' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>Acesso Admin</button>
                                 <button onClick={() => setManageTab('students')} className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${manageTab === 'students' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>Membros ({(studentStats || []).filter(s => s.schoolId === managedSchool.id).length})</button>
                                 <button onClick={() => setManageTab('partners')} className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${manageTab === 'partners' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>Parceiros ({partners.filter(p => p.schoolId === managedSchool.id).length})</button>
+                                <button onClick={() => setManageTab('access')} className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${manageTab === 'access' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>Acesso Admin</button>
+                                <button onClick={() => setManageTab('info')} className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${manageTab === 'info' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>Informações</button>
                             </div >
 
                             {manageTab === 'info' && (

@@ -29,6 +29,7 @@ export interface School {
   type: SchoolType;
   isActive: boolean;
   email: string;
+  cnpj: string;
   description?: string;
   createdAt: string;
 }
@@ -90,8 +91,8 @@ export interface Partner {
   logoUrl: string;
   bannerUrl?: string;
   address: string;
-  city?: string;
-  state?: string;
+  city: string;
+  state: string;
   activePromotions?: Promotion[];
   phoneNumber?: string;
   instagramUrl?: string;
@@ -105,6 +106,7 @@ export interface Partner {
   };
   isActive: boolean;
   email: string;
+  cnpj: string;
 }
 
 export interface AppUser {

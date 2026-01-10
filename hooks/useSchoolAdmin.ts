@@ -9,7 +9,7 @@ export const useSchoolAdmin = (
     user: any
 ) => {
     const [managedSchool, setManagedSchool] = useState<School | null>(null);
-    const [manageTab, setManageTab] = useState<'info' | 'students' | 'partners' | 'access'>('info');
+    const [manageTab, setManageTab] = useState<'info' | 'students' | 'partners' | 'access'>('students');
 
     const filteredSchools = schools.filter(s =>
         s.name.toLowerCase().includes(searchTerm.toLowerCase())

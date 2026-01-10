@@ -97,10 +97,18 @@ export const useStudentProfile = ({ user, myRequests, onRequestChange }: UseStud
             console.log('Uploading photo file...');
             setIsUploading(true);
             try {
-                // Upload to 'documents' bucket. Use getSigned=true to ensure immediate validity if bucket is private.
+                // Upload to 'documents' bucket. We store the path to avoid URL expiration.
                 const path = `student-updates/${user.studentData.id}`;
-                finalPhotoUrl = await uploadFile(photoUpdateModal.file, path, 'documents', true);
-                console.log('Upload successful, URL:', finalPhotoUrl);
+                const resultUrl = await uploadFile(photoUpdateModal.file, path, 'documents', false);
+
+                // Extract path from URL if it's a full Supabase URL
+                if (resultUrl.includes('/documents/')) {
+                    finalPhotoUrl = resultUrl.split('/documents/').pop() || resultUrl;
+                } else {
+                    finalPhotoUrl = resultUrl;
+                }
+
+                console.log('Upload successful, Path stored:', finalPhotoUrl);
             } catch (error) {
                 console.error('Error uploading photo:', error);
                 alert('Erro ao enviar a foto. Tente novamente.');
